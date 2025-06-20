@@ -1,14 +1,17 @@
 """
 Основные доменные типы и утилиты общего ядра.
 """
+
 from datetime import date, datetime
 from enum import Enum
-from typing import Optional, TypeVar, Generic, Any
+from typing import Optional
 from uuid import UUID, uuid4
+
 from pydantic import BaseModel, Field, validator
 
 # Общие типы идентификаторов
 EntityId = UUID
+
 
 def generate_id() -> UUID:
     """Генерирует новый UUID."""
@@ -17,17 +20,20 @@ def generate_id() -> UUID:
 
 class Money(BaseModel):
     """Денежная сумма с валютой."""
-    amount: float = Field(..., ge=0, description="Сумма денег")
-    currency: str = Field(default="RUB", max_length=3, description="Код валюты (ISO 4217)")
 
-    def __add__(self, other: 'Money') -> 'Money':
+    amount: float = Field(..., ge=0, description="Сумма денег")
+    currency: str = Field(
+        default="RUB", max_length=3, description="Код валюты (ISO 4217)"
+    )
+
+    def __add__(self, other: "Money") -> "Money":
         if not isinstance(other, Money):
             raise TypeError("Можно складывать только объекты Money")
         if self.currency != other.currency:
             raise ValueError("Нельзя складывать разные валюты")
         return Money(amount=self.amount + other.amount, currency=self.currency)
 
-    def __sub__(self, other: 'Money') -> 'Money':
+    def __sub__(self, other: "Money") -> "Money":
         if not isinstance(other, Money):
             raise TypeError("Можно вычитать только объекты Money")
         if self.currency != other.currency:
@@ -36,7 +42,7 @@ class Money(BaseModel):
             raise ValueError("Результат не может быть отрицательным")
         return Money(amount=self.amount - other.amount, currency=self.currency)
 
-    def __mul__(self, multiplier: float) -> 'Money':
+    def __mul__(self, multiplier: float) -> "Money":
         if not isinstance(multiplier, (int, float)):
             raise TypeError("Множитель должен быть числом")
         if multiplier < 0:
@@ -46,13 +52,14 @@ class Money(BaseModel):
 
 class DateRange(BaseModel):
     """Диапазон дат."""
+
     check_in: date
     check_out: date
 
-    @validator('check_out')
+    @validator("check_out")
     def check_out_after_check_in(cls, v, values):
-        if 'check_in' in values and v <= values['check_in']:
-            raise ValueError('Дата выезда должна быть позже даты заезда')
+        if "check_in" in values and v <= values["check_in"]:
+            raise ValueError("Дата выезда должна быть позже даты заезда")
         return v
 
     @property
@@ -63,6 +70,7 @@ class DateRange(BaseModel):
 
 class Address(BaseModel):
     """Почтовый адрес."""
+
     country: str
     city: str
     street: str
@@ -73,6 +81,7 @@ class Address(BaseModel):
 
 class DomainEvent(BaseModel):
     """Базовый класс для всех доменных событий."""
+
     event_id: UUID = Field(default_factory=uuid4)
     occurred_on: datetime = Field(default_factory=datetime.utcnow)
     event_type: str
@@ -84,6 +93,7 @@ class DomainEvent(BaseModel):
 # Общие перечисления
 class RoomType(str, Enum):
     """Типы номеров в отеле."""
+
     STANDARD = "standard"
     DELUXE = "deluxe"
     SUITE = "suite"
@@ -92,6 +102,7 @@ class RoomType(str, Enum):
 
 class BookingStatus(str, Enum):
     """Статусы бронирования."""
+
     PENDING = "pending"
     CONFIRMED = "confirmed"
     CANCELLED = "cancelled"
@@ -100,6 +111,7 @@ class BookingStatus(str, Enum):
 
 class PaymentStatus(str, Enum):
     """Статусы платежей."""
+
     PENDING = "pending"
     PAID = "paid"
     FAILED = "failed"
@@ -108,6 +120,7 @@ class PaymentStatus(str, Enum):
 
 class RoomStatus(str, Enum):
     """Статусы номеров."""
+
     AVAILABLE = "available"
     OCCUPIED = "occupied"
     MAINTENANCE = "maintenance"
@@ -117,16 +130,19 @@ class RoomStatus(str, Enum):
 # Общие исключения
 class DomainException(Exception):
     """Базовое исключение для доменных ошибок."""
+
     pass
 
 
 class ConcurrencyException(DomainException):
     """Исключение при конфликте версий."""
+
     pass
 
 
 class BusinessRuleValidationException(DomainException):
     """Исключение при нарушении бизнес-правил."""
+
     pass
 
 

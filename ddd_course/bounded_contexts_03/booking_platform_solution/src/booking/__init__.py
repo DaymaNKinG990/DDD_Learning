@@ -7,11 +7,11 @@
 - Управление состоянием бронирований
 """
 
-from . import domain, application, infrastructure, interfaces
+from . import application, domain, infrastructure, interfaces
 
 __all__ = [
-    'domain',
-    'application',
-    'infrastructure',
-    'interfaces',
+    "domain",
+    "application",
+    "infrastructure",
+    "interfaces",
 ]

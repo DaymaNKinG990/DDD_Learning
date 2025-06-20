@@ -2,6 +2,7 @@
 Конфигурация тестов для pytest.
 Добавляет корневую директорию проекта в PYTHONPATH.
 """
+
 import sys
 from pathlib import Path
 

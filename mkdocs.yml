@@ -1,0 +1,129 @@
+site_name: Изучаем DDD (Domain-Driven Design)
+site_url: https://DaymaNKinG990.github.io/DDD_Learning/ # Замените, если будете хостить в другом месте
+repo_url: https://github.com/DaymaNKinG990/DDD_Learning/
+repo_name: DaymaNKinG990/DDD_Learning
+
+theme:
+  name: material
+  language: ru
+  palette:
+    - scheme: default # Светлая тема
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Переключиться на темную тему
+    - scheme: slate # Темная тема
+      primary: blue
+      accent: light-blue
+      toggle:
+        icon: material/brightness-4
+        name: Переключиться на светлую тему
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotation
+    - content.code.copy
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_style: tango
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+      toc_depth: 3
+
+docs_dir: ddd_course # Указываем, что наши документы находятся здесь
+
+nav:
+  - 'Главная': 'README.md'
+  - 'Модуль 1: Введение':
+    - 'Теория': 'introduction_01/introduction_01.md'
+    - 'Квиз': 'introduction_01/quiz_03.md'
+    - 'Ответы': 'introduction_01/quiz_answers_04.md'
+    - 'Упражнение': 'introduction_01/exercise_05.md'
+  - 'Модуль 2: Единый язык':
+    - 'Теория': 'ubiquitous_language_02/ubiquitous_language_01.md'
+    - 'Пример кода': 'ubiquitous_language_02/code_example_02.md'
+    - 'Квиз': 'ubiquitous_language_02/quiz_03.md'
+    - 'Ответы': 'ubiquitous_language_02/quiz_answers_04.md'
+    - 'Упражнение': 'ubiquitous_language_02/exercise_05.md'
+    - 'Решение': 'ubiquitous_language_02/solution_06.md'
+  - 'Модуль 3: Ограниченные Контексты':
+    - 'Теория': 'bounded_contexts_03/bounded_contexts_01.md'
+    - 'Упражнение (Hotel)': 'bounded_contexts_03/hotel_booking_exercise_07.md'
+  - 'Модуль 4: Сущности':
+    - 'Теория': 'entities_04/entities_01.md'
+    - 'Квиз': 'entities_04/quiz_03.md'
+    - 'Ответы': 'entities_04/quiz_answers_04.md'
+    - 'Упражнение': 'entities_04/exercise_05.md'
+  - 'Модуль 5: Объекты-Значения':
+    - 'Теория': 'value_objects_05/value_objects_01.md'
+    - 'Квиз': 'value_objects_05/quiz_03.md'
+    - 'Ответы': 'value_objects_05/quiz_answers_04.md'
+    - 'Упражнение': 'value_objects_05/exercise_05.md'
+    - 'Решение': 'value_objects_05/solution_06.md'
+  - 'Модуль 6: Агрегаты':
+    - 'Теория': 'aggregates_06/aggregates_01.md'
+    - 'Пример кода': 'aggregates_06/code_example_02.md'
+    - 'Продвинутый пример': 'aggregates_06/advanced_example_03.md'
+    - 'Квиз': 'aggregates_06/quiz_03.md'
+    - 'Ответы': 'aggregates_06/quiz_answers_04.md'
+    - 'Упражнение': 'aggregates_06/exercise_05.md'
+    - 'Решение': 'aggregates_06/solution_06.md'
+  - 'Модуль 7: Доменные События':
+    - 'Теория': 'domain_events_07/domain_events_01.md'
+    - 'Пример кода': 'domain_events_07/code_example_02.md'
+    - 'Квиз': 'domain_events_07/quiz_03.md'
+    - 'Ответы': 'domain_events_07/quiz_answers_04.md'
+    - 'Упражнение': 'domain_events_07/exercise_05.md'
+    - 'Решение': 'domain_events_07/solution_06.md'
+    - 'Тесты': 'domain_events_07/tests_07.md'
+  - 'Модуль 8: Репозитории':
+    - 'Теория': 'repositories_08/repositories_01.md'
+    - 'Пример кода': 'repositories_08/code_example_02.md'
+    - 'Квиз': 'repositories_08/quiz_03.md'
+    - 'Ответы': 'repositories_08/quiz_answers_04.md'
+    - 'Упражнение': 'repositories_08/exercise_05.md'
+    - 'Решение': 'repositories_08/solution_06.md'
+    - 'Тесты': 'repositories_08/tests_07.md'
+  - 'Модуль 9: Сервисы Приложения':
+    - 'Теория': 'application_services_09/application_services_01.md'
+    - 'Пример кода': 'application_services_09/code_example_02.md'
+    - 'Квиз': 'application_services_09/quiz_03.md'
+    - 'Ответы': 'application_services_09/quiz_answers_04.md'
+    - 'Упражнение': 'application_services_09/exercise_05.md'
+    - 'Решение': 'application_services_09/solution_06.md'
+    - 'Тесты': 'application_services_09/tests_07.md'
+  - 'Модуль 10: Архитектура':
+    - 'Теория': 'architecture_10/architecture_01.md'
+    - 'Пример кода': 'architecture_10/code_example_02.md'
+    - 'Квиз': 'architecture_10/quiz_03.md'
+    - 'Ответы': 'architecture_10/quiz_answers_04.md'
+    - 'Упражнение': 'architecture_10/exercise_05.md'
+    - 'Решение': 'architecture_10/solution_06.md'
+    - 'Тесты': 'architecture_10/tests_07.md'
+  - 'Модуль 11: Интеграция и Композиция':
+    - 'Теория': 'integration_composition_11/theory_01.md'
+    - 'Пример кода': 'integration_composition_11/code_example_02.md'
+    - 'Квиз': 'integration_composition_11/quiz_03.md'
+    - 'Ответы': 'integration_composition_11/quiz_answers_04.md'
+    - 'Упражнение': 'integration_composition_11/exercise_05.md'
+    - 'Решение': 'integration_composition_11/solution_06.md'
+    - 'Тесты': 'integration_composition_11/tests_07.md'

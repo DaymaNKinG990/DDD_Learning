@@ -56,7 +56,7 @@ from uuid import UUID, uuid4
 @dataclass(frozen=True)
 class Email:
     address: str
-    
+
     def __post_init__(self):
         if "@" not in self.address:
             raise ValueError("Некорректный email адрес")
@@ -64,7 +64,7 @@ class Email:
 @dataclass
 class Author:
     name: str
-    
+
     def __post_init__(self):
         if not self.name.strip():
             raise ValueError("Имя автора не может быть пустым")

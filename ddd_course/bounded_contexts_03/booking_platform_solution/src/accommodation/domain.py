@@ -4,37 +4,41 @@
 Содержит основные сущности, агрегаты и доменные сервисы
 для управления заселением и выселением гостей.
 """
-from datetime import date, datetime, time, timedelta
+
+from datetime import date, datetime, timedelta
 from enum import Enum
-from typing import List, Optional, Dict, Any, Set
-from uuid import UUID, uuid4
+from typing import Any, Dict, List, Optional
+from uuid import uuid4
 
-from pydantic import BaseModel, Field, validator, root_validator
+from pydantic import BaseModel, Field
+from shared_kernel import DomainEvent, DomainException, EntityId, Money
 
-from shared_kernel import EntityId, DomainEvent, DomainException, Money
-from shared_kernel import BookingStatus as SharedBookingStatus
+from .interfaces import ICheckInRepository
 
 
 class CheckInStatus(str, Enum):
     """Статусы заселения."""
-    PENDING = "pending"      # Ожидает заселения
-    IN_HOUSE = "in_house"    # Гость заселен
+
+    PENDING = "pending"  # Ожидает заселения
+    IN_HOUSE = "in_house"  # Гость заселен
     CHECKED_OUT = "checked_out"  # Гость выселился
-    NO_SHOW = "no_show"      # Гость не явился
+    NO_SHOW = "no_show"  # Гость не явился
     CANCELLED = "cancelled"  # Бронирование отменено
 
 
 class RoomStatus(str, Enum):
     """Статусы номера."""
-    AVAILABLE = "available"      # Свободен и готов к заселению
-    OCCUPIED = "occupied"        # Занят
+
+    AVAILABLE = "available"  # Свободен и готов к заселению
+    OCCUPIED = "occupied"  # Занят
     MAINTENANCE = "maintenance"  # На обслуживании
-    CLEANING = "cleaning"        # В процессе уборки
-    OUT_OF_ORDER = "out_of_order" # Неисправен
+    CLEANING = "cleaning"  # В процессе уборки
+    OUT_OF_ORDER = "out_of_order"  # Неисправен
 
 
 class RoomType(str, Enum):
     """Типы номеров в отеле."""
+
     STANDARD = "standard"
     DELUXE = "deluxe"
     SUITE = "suite"
@@ -43,6 +47,7 @@ class RoomType(str, Enum):
 
 class Room(BaseModel):
     """Номер в отеле."""
+
     id: EntityId = Field(default_factory=uuid4)
     number: str  # Номер комнаты (например, "101", "202A")
     type: RoomType
@@ -58,12 +63,12 @@ class Room(BaseModel):
         """Помечает номер как занятый."""
         if self.status == RoomStatus.OCCUPIED:
             return
-            
+
         if self.status not in (RoomStatus.AVAILABLE, RoomStatus.CLEANING):
             raise DomainException(
                 f"Невозможно занять номер в статусе {self.status.value}"
             )
-            
+
         self.status = RoomStatus.OCCUPIED
 
     def mark_as_available(self) -> None:
@@ -87,6 +92,7 @@ class Room(BaseModel):
 
 class Guest(BaseModel):
     """Гость отеля."""
+
     id: EntityId = Field(default_factory=uuid4)
     first_name: str
     last_name: str
@@ -99,6 +105,7 @@ class Guest(BaseModel):
 
 class CheckIn(DomainEvent):
     """Событие заселения гостя."""
+
     check_in_id: EntityId
     room_id: EntityId
     guest_id: EntityId
@@ -111,6 +118,7 @@ class CheckIn(DomainEvent):
 
 class CheckOut(DomainEvent):
     """Событие выселения гостя."""
+
     check_in_id: EntityId
     room_id: EntityId
     guest_id: EntityId
@@ -121,6 +129,7 @@ class CheckOut(DomainEvent):
 
 class RoomMaintenanceScheduled(DomainEvent):
     """Событие планирования технического обслуживания номера."""
+
     room_id: EntityId
     room_number: str
     maintenance_start: datetime
@@ -130,6 +139,7 @@ class RoomMaintenanceScheduled(DomainEvent):
 
 class CheckInRecord(BaseModel):
     """Запись о заселении гостя."""
+
     id: EntityId = Field(default_factory=uuid4)
     booking_id: Optional[EntityId] = None
     room_id: EntityId
@@ -140,7 +150,7 @@ class CheckInRecord(BaseModel):
     actual_check_out: Optional[datetime] = None
     status: CheckInStatus = CheckInStatus.PENDING
     room_number: str  # Денормализованное поле для удобства
-    guest_name: str   # Денормализованное поле для удобства
+    guest_name: str  # Денормализованное поле для удобства
     adults: int = Field(..., gt=0)
     children: int = Field(0, ge=0)
     special_requests: Optional[str] = None
@@ -163,14 +173,12 @@ class CheckInRecord(BaseModel):
     def check_in(self, check_in_time: Optional[datetime] = None) -> None:
         """Выполняет заселение гостя."""
         if self.status != CheckInStatus.PENDING:
-            raise DomainException(
-                f"Невозможно заселить гостя в статусе {self.status}"
-            )
-        
+            raise DomainException(f"Невозможно заселить гостя в статусе {self.status}")
+
         self.status = CheckInStatus.IN_HOUSE
         self.actual_check_in = check_in_time or datetime.utcnow()
         self.updated_at = datetime.utcnow()
-        
+
         # Публикуем событие заселения
         self._domain_events.append(
             CheckIn(
@@ -182,21 +190,18 @@ class CheckInRecord(BaseModel):
                 check_out_date=self.check_out_date,
                 room_number=self.room_number,
                 guest_name=self.guest_name,
-                event_type="check_in"
             )
         )
 
     def check_out(self, check_out_time: Optional[datetime] = None) -> None:
         """Выполняет выселение гостя."""
         if self.status != CheckInStatus.IN_HOUSE:
-            raise DomainException(
-                f"Невозможно выселить гостя в статусе {self.status}"
-            )
-        
+            raise DomainException(f"Невозможно выселить гостя в статусе {self.status}")
+
         self.status = CheckInStatus.CHECKED_OUT
         self.actual_check_out = check_out_time or datetime.utcnow()
         self.updated_at = datetime.utcnow()
-        
+
         # Публикуем событие выселения
         self._domain_events.append(
             CheckOut(
@@ -206,7 +211,6 @@ class CheckInRecord(BaseModel):
                 check_out_date=self.check_out_date,
                 room_number=self.room_number,
                 guest_name=self.guest_name,
-                event_type="check_out"
             )
         )
 
@@ -216,7 +220,7 @@ class CheckInRecord(BaseModel):
             raise DomainException(
                 f"Невозможно отметить как неявку в статусе {self.status}"
             )
-        
+
         self.status = CheckInStatus.NO_SHOW
         self.updated_at = datetime.utcnow()
 
@@ -231,10 +235,10 @@ class CheckInRecord(BaseModel):
 
 class AccommodationService:
     """Доменный сервис для управления проживанием."""
-    
-    def __init__(self, check_in_repository: 'ICheckInRepository'):
+
+    def __init__(self, check_in_repository: "ICheckInRepository"):
         self.check_in_repository = check_in_repository
-    
+
     def check_in_guest(
         self,
         room: Room,
@@ -244,13 +248,13 @@ class AccommodationService:
         adults: int,
         children: int = 0,
         booking_id: Optional[EntityId] = None,
-        special_requests: Optional[str] = None
+        special_requests: Optional[str] = None,
     ) -> CheckInRecord:
         """Регистрирует заселение гостя."""
         # Проверяем, что номер доступен
         if room.status != RoomStatus.AVAILABLE:
             raise DomainException(f"Номер {room.number} недоступен для заселения")
-        
+
         # Создаем запись о заселении
         check_in = CheckInRecord(
             booking_id=booking_id,
@@ -262,39 +266,37 @@ class AccommodationService:
             guest_name=f"{guest.first_name} {guest.last_name}",
             adults=adults,
             children=children,
-            special_requests=special_requests
+            special_requests=special_requests,
         )
-        
+
         # Выполняем заселение
         check_in.check_in()
-        
+
         # Помечаем номер как занятый
         room.mark_as_occupied()
-        
+
         return check_in
-    
+
     def check_out_guest(
-        self,
-        check_in_id: EntityId,
-        check_out_time: Optional[datetime] = None
+        self, check_in_id: EntityId, check_out_time: Optional[datetime] = None
     ) -> CheckInRecord:
         """Выполняет выселение гостя."""
         # Получаем запись о заселении
         check_in = self.check_in_repository.get_by_id(check_in_id)
-        
+
         # Выполняем выселение
         check_in.check_out(check_out_time)
-        
+
         return check_in
-    
+
     def get_current_guests(self) -> List[CheckInRecord]:
         """Возвращает список текущих гостей отеля."""
         return self.check_in_repository.find_by_status(CheckInStatus.IN_HOUSE)
-    
+
     def get_expected_arrivals(self, date: date) -> List[CheckInRecord]:
         """Возвращает список ожидаемых заездов на указанную дату."""
         return self.check_in_repository.find_expected_arrivals(date)
-    
+
     def get_expected_departures(self, date: date) -> List[CheckInRecord]:
         """Возвращает список ожидаемых выездов на указанную дату."""
         return self.check_in_repository.find_expected_departures(date)
@@ -302,24 +304,20 @@ class AccommodationService:
 
 class RoomMaintenanceService:
     """Сервис для управления техническим обслуживанием номеров."""
-    
+
     def schedule_maintenance(
-        self,
-        room: Room,
-        start_time: datetime,
-        end_time: datetime,
-        reason: str
+        self, room: Room, start_time: datetime, end_time: datetime, reason: str
     ) -> RoomMaintenanceScheduled:
         """Планирует техническое обслуживание номера."""
         if room.status == RoomStatus.OCCUPIED:
             raise DomainException("Невозможно запланировать ТО занятого номера")
-        
+
         if start_time >= end_time:
             raise DomainException("Время окончания должно быть позже времени начала")
-        
+
         # Помечаем номер как находящийся на обслуживании
         room.mark_as_maintenance()
-        
+
         # Создаем событие планирования ТО
         event = RoomMaintenanceScheduled(
             room_id=room.id,
@@ -327,7 +325,6 @@ class RoomMaintenanceService:
             maintenance_start=start_time,
             maintenance_end=end_time,
             reason=reason,
-            event_type="room_maintenance_scheduled"
         )
-        
+
         return event
