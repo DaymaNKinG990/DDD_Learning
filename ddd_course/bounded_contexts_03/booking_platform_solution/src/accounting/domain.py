@@ -103,7 +103,7 @@ class InvoiceItem(BaseModel):
         return values
 
 
-class Invoice(DomainEvent):
+class Invoice(BaseModel):
     """Счет на оплату."""
 
     id: EntityId = Field(default_factory=uuid4)
@@ -121,6 +121,7 @@ class Invoice(DomainEvent):
     currency: str = "RUB"
     notes: Optional[str] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
+    _domain_events: List[DomainEvent] = Field([], private=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -190,6 +191,15 @@ class Invoice(DomainEvent):
         self.status = InvoiceStatus.ISSUED
         self.updated_at = datetime.utcnow()
 
+    @property
+    def domain_events(self) -> List[DomainEvent]:
+        """Возвращает список доменных событий."""
+        return self._domain_events
+
+    def clear_events(self) -> None:
+        """Очищает список доменных событий."""
+        self._domain_events = []
+
     def cancel(self, reason: Optional[str] = None) -> None:
         """Аннулирует счет."""
         if self.status in (InvoiceStatus.PAID, InvoiceStatus.CANCELLED):
@@ -221,7 +231,7 @@ class Invoice(DomainEvent):
         self.total = subtotal - discount_amount + tax_amount
 
 
-class Payment(DomainEvent):
+class Payment(BaseModel):
     """Платеж."""
 
     id: EntityId = Field(default_factory=uuid4)
@@ -233,6 +243,7 @@ class Payment(DomainEvent):
     processed_at: Optional[datetime] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
     notes: Optional[str] = None
+    _domain_events: List[DomainEvent] = Field([], private=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -256,6 +267,15 @@ class Payment(DomainEvent):
         self.processed_at = datetime.utcnow()
         self.notes = f"{self.notes or ''}\nОшибка: {reason or 'не указана'}"
         self.updated_at = datetime.utcnow()
+
+    @property
+    def domain_events(self) -> List[DomainEvent]:
+        """Возвращает список доменных событий."""
+        return self._domain_events
+
+    def clear_events(self) -> None:
+        """Очищает список доменных событий."""
+        self._domain_events = []
 
     def refund(
         self, amount: Optional[Money] = None, reason: Optional[str] = None

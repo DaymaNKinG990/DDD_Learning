@@ -9,7 +9,7 @@ import json
 import sys
 from datetime import date
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Type, TypeVar  # Добавлен Callable
+from typing import Awaitable, Callable, Dict, List, Optional, Type, TypeVar
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -71,38 +71,45 @@ class JsonFileRepository:
 class InMemoryBookingRepository(ports.IBookingRepository):
     """Реализация репозитория бронирований в памяти."""
 
-    def __init__(self) -> None:
+    def __init__(self, event_bus: ports.IEventBus) -> None:
         self._bookings: Dict[EntityId, Booking] = {}
+        self._event_bus = event_bus
         self._next_id = 1
 
-    def get_by_id(self, booking_id: EntityId) -> Booking:
+    async def get_by_id(self, booking_id: EntityId) -> Booking:
         if booking_id not in self._bookings:
             raise KeyError(f"Booking with id {booking_id} not found")
         return self._bookings[booking_id]
 
-    def add(self, booking: Booking) -> None:
+    async def add(self, booking: Booking) -> None:
         if booking.id in self._bookings:
             raise ValueError(f"Booking with id {booking.id} already exists")
         self._bookings[booking.id] = booking
+        for event in booking.domain_events:
+            await self._event_bus.publish(event)
+        booking.clear_events()
 
-    def update(self, booking: Booking) -> None:
+    async def update(self, booking: Booking) -> None:
         if booking.id not in self._bookings:
             raise KeyError(f"Booking with id {booking.id} not found")
         self._bookings[booking.id] = booking
+        for event in booking.domain_events:
+            await self._event_bus.publish(event)
+        booking.clear_events()
 
-    def find_by_guest(self, guest_id: EntityId) -> List[Booking]:
+    async def find_by_guest(self, guest_id: EntityId) -> List[Booking]:
         return [
             booking
             for booking in self._bookings.values()
             if booking.guest_id == guest_id
         ]
 
-    def find_by_status(self, status: BookingStatus) -> List[Booking]:
+    async def find_by_status(self, status: str) -> List[Booking]:
         return [
             booking for booking in self._bookings.values() if booking.status == status
         ]
 
-    def find_overlapping_bookings(
+    async def find_overlapping_bookings(
         self,
         room_id: EntityId,
         check_in: date,
@@ -133,10 +140,12 @@ class InMemoryRoomRepository(ports.IRoomRepository):
 
     def __init__(self) -> None:
         self._rooms: Dict[EntityId, Room] = {}
-        self._initialize_sample_data()
 
-    def _initialize_sample_data(self) -> None:
+    async def _initialize_sample_data(self) -> None:
         """Инициализирует тестовые данные."""
+        if self._rooms:
+            return
+
         from ..shared_kernel import Money, RoomType
 
         sample_rooms = [
@@ -177,21 +186,30 @@ class InMemoryRoomRepository(ports.IRoomRepository):
         for room in sample_rooms:
             self._rooms[room.id] = room
 
-    def get_by_id(self, room_id: EntityId) -> Room:
+    async def get_by_id(self, room_id: EntityId) -> Room:
         if room_id not in self._rooms:
             raise KeyError(f"Room with id {room_id} not found")
         return self._rooms[room_id]
 
-    def find_available_rooms(
+    async def find_available_rooms(
         self,
+        check_in: date,
+        check_out: date,
+        min_capacity: int,
         room_type: Optional[str] = None,
-        capacity: Optional[int] = None,
-        check_in: Optional[date] = None,
-        check_out: Optional[date] = None,
     ) -> List[Room]:
         # В реальном приложении здесь была бы проверка доступности
         # по датам через репозиторий бронирований
-        return list(self._rooms.values())
+        available_rooms = [
+            room for room in self._rooms.values() if room.capacity >= min_capacity
+        ]
+
+        if room_type:
+            available_rooms = [
+                room for room in available_rooms if room.type.value == room_type
+            ]
+
+        return available_rooms
 
 
 class InMemoryGuestRepository(ports.IGuestRepository):
@@ -200,10 +218,12 @@ class InMemoryGuestRepository(ports.IGuestRepository):
     def __init__(self) -> None:
         self._guests: Dict[EntityId, Guest] = {}
         self._email_index: Dict[str, Guest] = {}
-        self._initialize_sample_data()
 
-    def _initialize_sample_data(self) -> None:
+    async def _initialize_sample_data(self) -> None:
         """Инициализирует тестовые данные."""
+        if self._guests:
+            return
+
         sample_guests = [
             Guest(
                 id=UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
@@ -224,17 +244,17 @@ class InMemoryGuestRepository(ports.IGuestRepository):
         ]
 
         for guest in sample_guests:
-            self.add(guest)
+            await self.add(guest)
 
-    def get_by_id(self, guest_id: EntityId) -> Guest:
+    async def get_by_id(self, guest_id: EntityId) -> Guest:
         if guest_id not in self._guests:
             raise KeyError(f"Guest with id {guest_id} not found")
         return self._guests[guest_id]
 
-    def find_by_email(self, email: str) -> Optional[Guest]:
+    async def find_by_email(self, email: str) -> Optional[Guest]:
         return self._email_index.get(email.lower())
 
-    def add(self, guest: Guest) -> None:
+    async def add(self, guest: Guest) -> None:
         if guest.id in self._guests:
             raise ValueError(f"Guest with id {guest.id} already exists")
         if guest.email.lower() in self._email_index:
@@ -283,13 +303,12 @@ class InMemoryEventBus(ports.IEventBus):
     """Реализация шины событий в памяти."""
 
     def __init__(self, logger: Optional[ports.ILogger] = None):
-        # Типизируем более строго с Callable, ожидающим DomainEvent
         self._subscribers: Dict[
-            Type[DomainEvent], List[Callable[[DomainEvent], None]]
+            Type[DomainEvent], List[Callable[[DomainEvent], Awaitable[None]]]
         ] = {}
         self._logger = logger or ConsoleLogger()
 
-    def publish(self, event: DomainEvent) -> None:
+    async def publish(self, event: DomainEvent) -> None:
         """Публикует событие."""
         event_type = type(event)
         if event_type not in self._subscribers:
@@ -300,9 +319,9 @@ class InMemoryEventBus(ports.IEventBus):
             f"Publishing event: {event_type.__name__}", event=event.dict()
         )
 
-        for handler in self._subscribers[event_type]:
+        for handler in self._subscribers.get(event_type, []):
             try:
-                handler(event)
+                await handler(event)
             except Exception as e:
                 self._logger.error(
                     f"Error in event handler for {event_type.__name__}",
@@ -311,8 +330,10 @@ class InMemoryEventBus(ports.IEventBus):
                 )
 
     def subscribe(
-        self, event_type: Type[ports.T_Event], handler: Callable[[ports.T_Event], None]
-    ) -> None:  # Используем T_Event из ports
+        self,
+        event_type: Type[ports.T_Event],
+        handler: Callable[[ports.T_Event], Awaitable[None]],
+    ) -> None:
         """Подписывает обработчик на события указанного типа."""
         if event_type not in self._subscribers:
             self._subscribers[event_type] = []
@@ -328,12 +349,14 @@ class BookingUnitOfWork(ports.IBookingUnitOfWork):
         bookings_repo: Optional[ports.IBookingRepository] = None,
         rooms_repo: Optional[ports.IRoomRepository] = None,
         guests_repo: Optional[ports.IGuestRepository] = None,
+        event_bus: Optional[ports.IEventBus] = None,  # Добавляем event_bus
         logger: Optional[ports.ILogger] = None,
     ):
-        self._bookings = bookings_repo or InMemoryBookingRepository()
+        self._logger = logger or ConsoleLogger()
+        self._event_bus = event_bus or InMemoryEventBus(self._logger)
+        self._bookings = bookings_repo or InMemoryBookingRepository(self._event_bus)
         self._rooms = rooms_repo or InMemoryRoomRepository()
         self._guests = guests_repo or InMemoryGuestRepository()
-        self._logger = logger or ConsoleLogger()
         self._committed = False
 
     @property
@@ -348,24 +371,33 @@ class BookingUnitOfWork(ports.IBookingUnitOfWork):
     def guests(self) -> ports.IGuestRepository:
         return self._guests
 
-    def commit(self) -> None:
+    @property
+    def event_bus(self) -> ports.IEventBus:
+        return self._event_bus
+
+    async def commit(self) -> None:
         """Фиксирует все изменения."""
         # В реальном приложении здесь была бы фиксация транзакции
         self._committed = True
         self._logger.info("BookingUnitOfWork committed")
 
-    def rollback(self) -> None:
+    async def rollback(self) -> None:
         """Откатывает все изменения."""
         # В реальном приложении здесь был бы откат транзакции
         self._committed = False
         self._logger.warning("BookingUnitOfWork rolled back")
 
-    def __enter__(self):
+    async def __aenter__(self):
+        # Initialize repos if they are the in-memory versions
+        if isinstance(self._rooms, InMemoryRoomRepository):
+            await self._rooms._initialize_sample_data()
+        if isinstance(self._guests, InMemoryGuestRepository):
+            await self._guests._initialize_sample_data()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
         if exc_type is None:
-            self.commit()
+            await self.commit()
         else:
-            self.rollback()
-        return False  # Пробрасываем исключение дальше, если оно было
+            await self.rollback()
+        return False

@@ -7,7 +7,7 @@ from uuid import uuid4
 import pytest
 
 # Импортируем классы из примера
-from ..bounded_contexts_example_02 import (
+from ddd_course.bounded_contexts_03.bounded_contexts_example_02 import (
     Money,
     Order,
     OrderRepository,

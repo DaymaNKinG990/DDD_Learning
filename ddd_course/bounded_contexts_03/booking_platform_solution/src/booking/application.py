@@ -9,8 +9,8 @@ from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, validator
+from shared_kernel import BookingStatus, DateRange, EntityId, generate_id
 
-from ..shared_kernel import BookingStatus, DateRange, EntityId
 from . import interfaces as ports
 from .domain import Booking, BookingPolicy, BookingService, Guest, Room
 
@@ -60,6 +60,16 @@ class CancelBookingRequest(BaseModel):
 
     booking_id: EntityId
     reason: Optional[str] = None
+
+
+class RegisterGuestRequest(BaseModel):
+    """Запрос на регистрацию нового гостя."""
+
+    first_name: str
+    last_name: str
+    email: str
+    phone: str
+    document_number: str
 
 
 # DTO для исходящих данных
@@ -160,19 +170,24 @@ class BookingApplicationService:
         self._uow = uow
         self._booking_service = BookingService(self._uow.bookings)
 
-    def create_booking(self, request: CreateBookingRequest) -> BookingDTO:
+    async def create_booking(self, request: CreateBookingRequest) -> BookingDTO:
         """Создает новое бронирование."""
-        try:
+        async with self._uow:
             # Проверяем период бронирования
             period = DateRange(check_in=request.check_in, check_out=request.check_out)
             BookingPolicy.validate_booking_period(period)
 
             # Получаем номер и гостя
-            room = self._uow.rooms.get_by_id(request.room_id)
-            guest = self._uow.guests.get_by_id(request.guest_id)
+            room = await self._uow.rooms.get_by_id(request.room_id)
+            if not room:
+                raise ValueError(f"Room with id {request.room_id} not found")
 
-            # Создаем бронирование
-            booking = self._booking_service.create_booking(
+            guest = await self._uow.guests.get_by_id(request.guest_id)
+            if not guest:
+                raise ValueError(f"Guest with id {request.guest_id} not found")
+
+            # Создаем бронирование через доменный сервис
+            booking = await self._booking_service.create_booking(
                 room=room,
                 guest_id=guest.id,
                 period=period,
@@ -181,25 +196,23 @@ class BookingApplicationService:
                 special_requests=request.special_requests,
             )
 
-            # Сохраняем изменения
-            self._uow.commit()
-
+            # UoW commit'нет изменения автоматически при выходе из `async with`
             return BookingDTO.from_domain(booking)
 
-        except Exception:
-            self._uow.rollback()
-            raise
-
-    def get_booking(self, booking_id: EntityId) -> BookingDTO:
+    async def get_booking(self, booking_id: EntityId) -> Optional[BookingDTO]:
         """Возвращает информацию о бронировании."""
-        booking = self._uow.bookings.get_by_id(booking_id)
+        booking = await self._uow.bookings.get_by_id(booking_id)
+        if not booking:
+            return None
         return BookingDTO.from_domain(booking)
 
-    def update_booking(self, request: UpdateBookingRequest) -> BookingDTO:
+    async def update_booking(self, request: UpdateBookingRequest) -> BookingDTO:
         """Обновляет информацию о бронировании."""
-        try:
+        async with self._uow:
             # Получаем бронирование
-            booking = self._uow.bookings.get_by_id(request.booking_id)
+            booking = await self._uow.bookings.get_by_id(request.booking_id)
+            if not booking:
+                raise ValueError(f"Booking with id {request.booking_id} not found")
 
             # Обновляем информацию, если передана
             if request.check_in is not None or request.check_out is not None:
@@ -219,7 +232,7 @@ class BookingApplicationService:
                 BookingPolicy.validate_booking_period(new_period)
 
                 # Проверяем доступность номера на новый период
-                if not self._booking_service.is_room_available(
+                if not await self._booking_service.is_room_available(
                     room_id=booking.room_id,
                     period=new_period,
                     exclude_booking_id=booking.id,
@@ -236,42 +249,31 @@ class BookingApplicationService:
             booking.updated_at = datetime.now()
 
             # Сохраняем изменения
-            self._uow.bookings.update(booking)
-            self._uow.commit()
+            await self._uow.bookings.update(booking)
+            # UoW commit'нет изменения автоматически при выходе из `async with`
 
             return BookingDTO.from_domain(booking)
 
-        except Exception:
-            self._uow.rollback()
-            raise
-
-    def cancel_booking(self, request: CancelBookingRequest) -> BookingDTO:
+    async def cancel_booking(self, request: CancelBookingRequest) -> BookingDTO:
         """Отменяет бронирование."""
-        try:
-            # Отменяем бронирование
-            booking = self._booking_service.cancel_booking(
+        async with self._uow:
+            # Отменяем бронирование через доменный сервис
+            booking = await self._booking_service.cancel_booking(
                 booking_id=request.booking_id, reason=request.reason
             )
-
-            # Сохраняем изменения
-            self._uow.commit()
-
+            # UoW commit'нет изменения автоматически при выходе из `async with`
             return BookingDTO.from_domain(booking)
 
-        except Exception:
-            self._uow.rollback()
-            raise
-
-    def list_bookings(
+    async def list_bookings(
         self,
         guest_id: Optional[EntityId] = None,
         status: Optional[BookingStatus] = None,
     ) -> List[BookingDTO]:
         """Возвращает список бронирований с фильтрацией."""
         if guest_id is not None:
-            bookings = self._uow.bookings.find_by_guest(guest_id)
+            bookings = await self._uow.bookings.find_by_guest(guest_id)
         elif status is not None:
-            bookings = self._uow.bookings.find_by_status(status)
+            bookings = await self._uow.bookings.find_by_status(status.value)
         else:
             # В реальном приложении здесь была бы пагинация
             bookings = []
@@ -286,7 +288,7 @@ class RoomApplicationService:
         """Инициализирует сервис."""
         self._uow = uow
 
-    def list_available_rooms(
+    async def list_available_rooms(
         self,
         check_in: date,
         check_out: date,
@@ -299,11 +301,11 @@ class RoomApplicationService:
         BookingPolicy.validate_booking_period(period)
 
         # Получаем все доступные номера
-        rooms = self._uow.rooms.find_available_rooms(
-            check_in=period.check_in,
-            check_out=period.check_out,
+        rooms = await self._uow.rooms.find_available_rooms(
+            check_in=check_in,
+            check_out=check_out,
             room_type=room_type,
-            capacity=capacity,
+            min_capacity=capacity or 1,
         )
 
         # Фильтруем номера, которые уже забронированы на выбранные даты
@@ -311,14 +313,16 @@ class RoomApplicationService:
         booking_service = BookingService(self._uow.bookings)
 
         for room in rooms:
-            if booking_service.is_room_available(room.id, period):
+            if await booking_service.is_room_available(room.id, period):
                 available_rooms.append(room)
 
         return [RoomDTO.from_domain(room) for room in available_rooms]
 
-    def get_room(self, room_id: EntityId) -> RoomDTO:
+    async def get_room(self, room_id: EntityId) -> Optional[RoomDTO]:
         """Возвращает информацию о номере."""
-        room = self._uow.rooms.get_by_id(room_id)
+        room = await self._uow.rooms.get_by_id(room_id)
+        if not room:
+            return None
         return RoomDTO.from_domain(room)
 
 
@@ -329,48 +333,39 @@ class GuestApplicationService:
         """Инициализирует сервис."""
         self._uow = uow
 
-    def register_guest(
+    async def register_guest(
         self,
-        first_name: str,
-        last_name: str,
-        email: str,
-        phone: str,
-        document_number: str,
+        request: RegisterGuestRequest,
     ) -> GuestDTO:
         """Регистрирует нового гостя."""
-        try:
+        async with self._uow:
             # Проверяем, что гость с таким email еще не зарегистрирован
-            existing_guest = self._uow.guests.find_by_email(email)
+            existing_guest = await self._uow.guests.find_by_email(request.email)
             if existing_guest is not None:
-                raise ValueError(f"Гость с email {email} уже зарегистрирован")
+                raise ValueError(f"Гость с email {request.email} уже зарегистрирован")
 
-            # Создаем гостя
             guest = Guest(
-                first_name=first_name,
-                last_name=last_name,
-                email=email,
-                phone=phone,
-                document_number=document_number,
+                id=generate_id(),
+                first_name=request.first_name,
+                last_name=request.last_name,
+                email=request.email,
+                phone=request.phone,
+                document_number=request.document_number,
             )
-
-            # Сохраняем гостя
-            self._uow.guests.add(guest)
-            self._uow.commit()
-
+            await self._uow.guests.add(guest)
+            # UoW commit'нет изменения автоматически при выходе из `async with`
             return GuestDTO.from_domain(guest)
 
-        except Exception:
-            self._uow.rollback()
-            raise
-
-    def get_guest(self, guest_id: EntityId) -> GuestDTO:
+    async def get_guest(self, guest_id: EntityId) -> Optional[GuestDTO]:
         """Возвращает информацию о госте."""
-        guest = self._uow.guests.get_by_id(guest_id)
+        guest = await self._uow.guests.get_by_id(guest_id)
+        if not guest:
+            return None
         return GuestDTO.from_domain(guest)
 
-    def find_guest_by_email(self, email: str) -> Optional[GuestDTO]:
+    async def find_guest_by_email(self, email: str) -> Optional[GuestDTO]:
         """Находит гостя по email."""
-        guest = self._uow.guests.find_by_email(email)
-        if guest is None:
+        guest = await self._uow.guests.find_by_email(email)
+        if not guest:
             return None
         return GuestDTO.from_domain(guest)

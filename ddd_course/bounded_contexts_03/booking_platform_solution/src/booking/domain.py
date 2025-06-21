@@ -6,7 +6,7 @@
 """
 
 from datetime import date, datetime, timedelta
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from pydantic import BaseModel, Field
 from shared_kernel import (
@@ -20,9 +20,10 @@ from shared_kernel import (
     generate_id,
 )
 
-from .interfaces import (
-    IBookingRepository,
-)
+if TYPE_CHECKING:
+    from .interfaces import (
+        IBookingRepository,
+    )
 
 
 class Guest(BaseModel):
@@ -210,7 +211,7 @@ class BookingService:
     def __init__(self, booking_repository: "IBookingRepository"):
         self.booking_repository = booking_repository
 
-    def create_booking(
+    async def create_booking(
         self,
         room: Room,
         guest_id: EntityId,
@@ -221,7 +222,7 @@ class BookingService:
     ) -> Booking:
         """Создает новое бронирование."""
         # Проверяем доступность номера на выбранные даты
-        if not self.is_room_available(room.id, period):
+        if not await self.is_room_available(room.id, period):
             raise BusinessRuleValidationException(
                 f"Номер {room.number} уже забронирован на выбранные даты"
             )
@@ -237,10 +238,10 @@ class BookingService:
         )
 
         # Сохраняем бронирование
-        self.booking_repository.add(booking)
+        await self.booking_repository.add(booking)
         return booking
 
-    def is_room_available(
+    async def is_room_available(
         self,
         room_id: EntityId,
         period: DateRange,
@@ -248,7 +249,7 @@ class BookingService:
     ) -> bool:
         """Проверяет, доступен ли номер на указанные даты."""
         # Получаем все пересекающиеся бронирования для этого номера
-        overlapping_bookings = self.booking_repository.find_overlapping_bookings(
+        overlapping_bookings = await self.booking_repository.find_overlapping_bookings(
             room_id=room_id,
             check_in=period.check_in,
             check_out=period.check_out,
@@ -261,18 +262,22 @@ class BookingService:
             for booking in overlapping_bookings
         )
 
-    def confirm_booking(self, booking_id: EntityId) -> Booking:
+    async def confirm_booking(self, booking_id: EntityId) -> Booking:
         """Подтверждает бронирование."""
-        booking = self.booking_repository.get_by_id(booking_id)
+        booking = await self.booking_repository.get_by_id(booking_id)
+        if not booking:
+            raise ValueError(f"Booking with id {booking_id} not found")
         booking.confirm()
-        self.booking_repository.update(booking)
+        await self.booking_repository.update(booking)
         return booking
 
-    def cancel_booking(
+    async def cancel_booking(
         self, booking_id: EntityId, reason: Optional[str] = None
     ) -> Booking:
         """Отменяет бронирование."""
-        booking = self.booking_repository.get_by_id(booking_id)
+        booking = await self.booking_repository.get_by_id(booking_id)
+        if not booking:
+            raise ValueError(f"Booking with id {booking_id} not found")
         booking.cancel(reason)
-        self.booking_repository.update(booking)
+        await self.booking_repository.update(booking)
         return booking

@@ -10,7 +10,10 @@ from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
-from pydantic import EmailStr, Set
+from booking.infrastructure import (
+    InMemoryRoomRepository as BookingRoomRepository,
+)
+from pydantic import Set
 from shared_kernel import EntityId, Money
 
 from .domain import (
@@ -29,6 +32,7 @@ from .interfaces import (
     IInvoiceRepository,
     IPaymentGateway,
     IPaymentRepository,
+    IRoomRepository,
 )
 
 
@@ -44,6 +48,10 @@ class InMemoryInvoiceRepository(IInvoiceRepository):
     async def get_by_id(self, invoice_id: EntityId) -> Optional[Invoice]:
         """Возвращает счет по идентификатору."""
         return self._invoices.get(invoice_id)
+
+    async def add(self, invoice: Invoice) -> None:
+        """Добавляет новый счет."""
+        await self.save(invoice)
 
     async def get_by_number(self, number: str) -> Optional[Invoice]:
         """Возвращает счет по номеру."""
@@ -328,11 +336,32 @@ class InMemoryFinancialPeriodRepository(IFinancialPeriodRepository):
 class AccountingUnitOfWork(IAccountingUnitOfWork):
     """Единица работы (Unit of Work) для контекста учета."""
 
+    invoices: IInvoiceRepository
+    payments: IPaymentRepository
+    financial_periods: IFinancialPeriodRepository
+    rooms: IRoomRepository
+
     def __init__(self) -> None:
         self.invoices = InMemoryInvoiceRepository()
         self.payments = InMemoryPaymentRepository()
         self.financial_periods = InMemoryFinancialPeriodRepository()
+        # Контексту бухгалтерии нужны данные о комнатах для создания счетов,
+        # поэтому мы используем реализацию репозитория из контекста бронирования.
+        self.rooms = BookingRoomRepository()
         self._committed = True
+
+    async def __aenter__(self) -> IAccountingUnitOfWork:
+        self._committed = False
+        # Для in-memory UoW настоящий откат потребовал бы глубокого копирования
+        # состояния репозиториев здесь. Для этого примера мы просто
+        # сбросим их в методе rollback в случае сбоя транзакции.
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        if exc_type:
+            await self.rollback()
+        else:
+            await self.commit()
 
     async def commit(self) -> None:
         """Фиксирует все изменения в рамках единицы работы."""
@@ -346,6 +375,7 @@ class AccountingUnitOfWork(IAccountingUnitOfWork):
             self.invoices = InMemoryInvoiceRepository()
             self.payments = InMemoryPaymentRepository()
             self.financial_periods = InMemoryFinancialPeriodRepository()
+            self.rooms = BookingRoomRepository()
 
 
 class DummyPaymentGateway(IPaymentGateway):
@@ -426,54 +456,43 @@ class DummyPaymentGateway(IPaymentGateway):
 class ConsoleEmailService(IEmailService):
     """Сервис электронной почты, который выводит сообщения в консоль."""
 
-    async def send_template(
-        self, recipient: EmailStr, template_name: str, context: Optional[Dict] = None
-    ) -> bool:
-        """Отправляет email по шаблону."""
-        print("\n--- [Email Gateway] ---")
-        print(f"Получатель: {recipient}")
-        print(f"Шаблон: {template_name}")
-        context_json = json.dumps(
-            context or {}, default=str, ensure_ascii=False, indent=2
-        )
-        print(f"Контекст: {context_json}")
-        return True
-
     async def send_invoice(
-        self,
-        recipient: EmailStr,
-        invoice: Invoice,
-        template_name: str = "invoice.html",
-        context: Optional[Dict[str, Any]] = None,
-    ) -> bool:
-        """Выводит информацию о счете в консоль."""
-        print(f"[EMAIL] Отправка счета {invoice.number} на {recipient}")
-        print(f"Шаблон: {template_name}")
-        context_json = json.dumps(
-            context or {}, default=str, ensure_ascii=False, indent=2
+        self, to_email: str, invoice: Invoice, context: Dict[str, Any]
+    ) -> None:
+        """Отправляет счет по email."""
+        print("\n--- [Email Service] ---")
+        print(f"To: {to_email}")
+        print(f"Subject: Счет #{invoice.number} от {invoice.issue_date}")
+        print("Body:")
+        print("  Уважаемый клиент,")
+        print(
+            f"  Во вложении ваш счет на сумму {invoice.total.amount} "
+            f"{invoice.total.currency}."
         )
-        print(f"Контекст: {context_json}")
-        return True
+        print(f"  Срок оплаты: {invoice.due_date}")
+        print(f"  Контекст: {json.dumps(context, indent=2) if context else '{}'}")
+        print("--- [End of Email] ---\n")
 
     async def send_payment_confirmation(
-        self,
-        recipient: EmailStr,
-        payment: Payment,
-        template_name: str = "payment_confirmation.html",
-        context: Optional[Dict[str, Any]] = None,
-    ) -> bool:
-        """Выводит подтверждение платежа в консоль."""
-        print(f"[EMAIL] Отправка подтверждения платежа {payment.id} на {recipient}")
-        print(f"Шаблон: {template_name}")
-        context_json = json.dumps(
-            context or {}, default=str, ensure_ascii=False, indent=2
+        self, to_email: str, payment: Payment, context: Dict[str, Any]
+    ) -> None:
+        """Отправляет подтверждение об оплате."""
+        print("\n--- [Email Service] ---")
+        print(f"To: {to_email}")
+        print(f"Subject: Подтверждение оплаты по счету #{payment.invoice_id}")
+        print("Body:")
+        print("  Уважаемый клиент,")
+        print(
+            f"  Ваш платеж на сумму {payment.amount.amount} {payment.amount.currency} "
+            f"успешно обработан."
         )
-        print(f"Контекст: {context_json}")
-        return True
+        print(f"  ID транзакции: {payment.transaction_id}")
+        print(f"  Контекст: {json.dumps(context, indent=2) if context else '{}'}")
+        print("--- [End of Email] ---\n")
 
     async def send_financial_report(
         self,
-        recipient: EmailStr,
+        to_email: str,
         report_data: bytes,
         report_name: str,
         subject: str,
@@ -481,7 +500,7 @@ class ConsoleEmailService(IEmailService):
         file_format: str = "pdf",
     ) -> bool:
         """Выводит информацию о финансовом отчете в консоль."""
-        print(f"[EMAIL] Отправка финансового отчета '{report_name}' на {recipient}")
+        print(f"[EMAIL] Отправка финансового отчета '{report_name}' на {to_email}")
         print(f"Тема: {subject}")
         print(f"Формат: {file_format}")
         print(f"Размер данных: {len(report_data)} байт")

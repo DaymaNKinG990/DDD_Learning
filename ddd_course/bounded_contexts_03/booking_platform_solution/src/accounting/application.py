@@ -4,15 +4,18 @@
 Содержит DTO и прикладные сервисы для работы с финансами.
 """
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
+from booking.domain import BookingCreated
+from booking.infrastructure import RoomRepository
+from booking.interfaces import IRoomRepository
 from pydantic import BaseModel, Field
 from shared_kernel import EntityId, Money
 
-from .domain import AccountingService as DomainAccountingService
 from .domain import (
+    AccountingService,
     FinancialPeriod,
     FinancialReport,
     Invoice,
@@ -306,12 +309,45 @@ class AccountingApplicationService(IAccountingService):
         payment_gateway: IPaymentGateway,
         email_service: IEmailService,
         report_generator: IFinancialReportGenerator,
+        room_repo: IRoomRepository,  # Добавляем зависимость
     ):
         self.uow = uow
         self.payment_gateway = payment_gateway
         self.email_service = email_service
         self.report_generator = report_generator
-        self.domain_service = DomainAccountingService(uow.invoices)
+        self.room_repo = room_repo  # Сохраняем зависимость
+        self.domain_service = AccountingService(uow.invoices)
+
+    async def create_invoice_for_booking(self, event: BookingCreated) -> None:
+        """Создает счет на основе события создания бронирования."""
+        async with self.uow:
+            room = await self.room_repo.get_by_id(event.room_id)
+            if not room:
+                # В реальном приложении здесь будет логирование или выброс исключения
+                return
+
+            period_days = (event.check_out - event.check_in).days
+            item_description = (
+                f"Проживание в номере {room.number} "
+                f"с {event.check_in} по {event.check_out}"
+            )
+            total_price = room.base_price_per_night * period_days
+
+            invoice_item = InvoiceItem(
+                description=item_description,
+                quantity=Decimal(1),
+                unit_price=total_price,
+            )
+
+            invoice = self.domain_service.create_invoice(
+                guest_id=event.guest_id,
+                due_date=event.check_in - timedelta(days=1),
+                items=[invoice_item],
+                booking_id=event.id,
+            )
+
+            await self.uow.invoices.add(invoice)
+            await self.uow.commit()
 
     # ===============================================================
     # Методы для работы со счетами
@@ -699,6 +735,7 @@ def create_accounting_service(
     payment_gateway: Optional[IPaymentGateway] = None,
     email_service: Optional[IEmailService] = None,
     report_generator: Optional[IFinancialReportGenerator] = None,
+    room_repo: Optional[IRoomRepository] = None,
 ) -> AccountingApplicationService:
     """Создает экземпляр прикладного сервиса учета."""
     if uow is None:
@@ -713,9 +750,14 @@ def create_accounting_service(
     if report_generator is None:
         report_generator = SimpleFinancialReportGenerator(uow)
 
+    if room_repo is None:
+        # В реальном приложении сюда бы передавалась сессия БД
+        room_repo = RoomRepository()
+
     return AccountingApplicationService(
         uow=uow,
         payment_gateway=payment_gateway,
         email_service=email_service,
         report_generator=report_generator,
+        room_repo=room_repo,
     )

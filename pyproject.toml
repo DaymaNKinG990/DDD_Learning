@@ -15,10 +15,9 @@ dependencies = [
     "sqlalchemy>=1.4.0",
     "uuid>=1.30",
     "pre-commit>=3.0.0",
-    "ruff>=0.4.0"
+    "ruff>=0.4.0",
+    "pydantic>=2.11.7",
 ]
-
-
 
 [tool.ruff]
 line-length = 88
@@ -63,6 +62,19 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
 
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --cov=ddd_course --cov-report=term-missing --cov-report=xml"
+testpaths = [
+    "ddd_course"
+]
+pythonpath = [
+    "ddd_course"
+]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+
 [tool.mypy]
 python_version = "3.12"
 packages = ["ddd_course"]
@@ -78,13 +90,3 @@ exclude = [
     'dist',
     '.*migrations.*',
 ]
-
-[tool.pytest.ini_options]
-minversion = "7.0"
-addopts = "-ra -q --cov=ddd_course --cov-report=term-missing --cov-report=xml"
-testpaths = [
-    "ddd_course",
-]
-python_files = "test_*.py"
-python_classes = "Test*"
-python_functions = "test_*"
