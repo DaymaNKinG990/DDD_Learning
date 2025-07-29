@@ -1,0 +1,1 @@
+"""Shared domain components for the marketplace project."""

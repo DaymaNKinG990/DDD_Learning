@@ -1,0 +1,1 @@
+"""Shared infrastructure components for the marketplace project."""
