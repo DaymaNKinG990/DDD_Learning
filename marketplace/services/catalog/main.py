@@ -5,8 +5,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.catalog.application.services import CatalogService
-from src.catalog.infrastructure.repositories import InMemoryCatalogRepository
-from src.interfaces.api.controllers import router as catalog_router
+from src.catalog.infrastructure.repositories import InMemoryProductRepository, InMemoryCategoryRepository, InMemoryBrandRepository
+from src.interfaces.api.controllers import catalog_router
 from src.shared.infrastructure.database import close_db, init_db
 from src.shared.infrastructure.middleware import (
     CacheMiddleware,
@@ -15,7 +15,7 @@ from src.shared.infrastructure.middleware import (
     SecurityMiddleware,
 )
 from src.shared.infrastructure.error_handlers import ErrorHandler
-
+from src.shared.infrastructure.monitoring import metrics_endpoint, update_health_status, MetricsMiddleware
 
 # Create FastAPI app
 app = FastAPI(
@@ -43,22 +43,26 @@ app.add_middleware(SecurityMiddleware)
 app.add_middleware(LoggingMiddleware)
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(CacheMiddleware)
+app.add_middleware(MetricsMiddleware)
 
 # Include routers
 app.include_router(catalog_router, prefix="/catalog", tags=["catalog"])
+
+# Add metrics endpoint
+app.add_api_route("/metrics", metrics_endpoint, methods=["GET"])
 
 # Database events
 @app.on_event("startup")
 async def startup_event():
     """Initialize database on startup."""
     await init_db()
-
+    update_health_status("catalog", True)
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Close database on shutdown."""
     await close_db()
-
+    update_health_status("catalog", False)
 
 @app.get("/")
 async def root():
@@ -70,21 +74,20 @@ async def root():
         "endpoints": {
             "products": "/catalog/products",
             "categories": "/catalog/categories",
-            "brands": "/catalog/brands",
-        },
+            "brands": "/catalog/brands"
+        }
     }
-
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
+    update_health_status("catalog", True)
     return {
         "status": "healthy",
         "service": "catalog",
         "timestamp": datetime.utcnow().isoformat(),
         "version": "1.0.0"
     }
-
 
 if __name__ == "__main__":
     import uvicorn

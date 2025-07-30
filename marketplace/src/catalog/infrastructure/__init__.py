@@ -1,5 +1,6 @@
 """Catalog infrastructure implementations."""
 
+# Python imports
 from .repositories import (
     InMemoryBrandRepository,
     InMemoryCategoryRepository,

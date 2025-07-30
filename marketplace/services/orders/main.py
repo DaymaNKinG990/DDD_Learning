@@ -5,8 +5,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.orders.application.services import OrderService
-from src.orders.infrastructure.repositories import InMemoryOrderRepository
-from src.interfaces.api.controllers import router as orders_router
+from src.orders.infrastructure.repositories import InMemoryOrderRepository, InMemoryOrderItemRepository
+from src.interfaces.api.controllers import orders_router
 from src.shared.infrastructure.database import close_db, init_db
 from src.shared.infrastructure.middleware import (
     CacheMiddleware,

@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.notifications.application.services import NotificationService
-from src.notifications.infrastructure.repositories import InMemoryNotificationRepository
+from src.notifications.infrastructure.repositories import InMemoryNotificationRepository, InMemoryNotificationBatchRepository, InMemoryNotificationSubscriptionRepository
 from src.interfaces.api.notifications_controllers import router as notifications_router
 from src.shared.infrastructure.database import close_db, init_db
 from src.shared.infrastructure.middleware import (

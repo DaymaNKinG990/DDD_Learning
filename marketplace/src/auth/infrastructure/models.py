@@ -1,13 +1,26 @@
 """SQLAlchemy models for authentication domain."""
 
+# Python imports
 from sqlalchemy import Boolean, Column, DateTime, String, Text
-from sqlalchemy.orm import relationship
 
+# Local imports
 from src.shared.infrastructure.models import Base, TimestampMixin
 
 
 class TokenPairModel(Base, TimestampMixin):
-    """SQLAlchemy model for TokenPair entity."""
+    """
+    SQLAlchemy model for TokenPair entity.
+    
+    Attributes:
+        id: The token pair ID.
+        user_id: The user ID.
+        access_token: The access token.
+        refresh_token: The refresh token.
+        token_type: The token type.
+        is_revoked: Whether the token pair is revoked.
+        access_token_expires_at: The access token expiration date.
+        refresh_token_expires_at: The refresh token expiration date.
+    """
     
     __tablename__ = "token_pairs"
     
@@ -22,7 +35,19 @@ class TokenPairModel(Base, TimestampMixin):
 
 
 class UserSessionModel(Base, TimestampMixin):
-    """SQLAlchemy model for UserSession entity."""
+    """
+    SQLAlchemy model for UserSession entity.
+    
+    Attributes:
+        id: The session ID.
+        user_id: The user ID.
+        refresh_token: The refresh token.
+        ip_address: The IP address of the session.
+        user_agent: The user agent of the session.
+        is_active: Whether the session is active.
+        last_activity: The last activity timestamp.
+        refresh_token_expires_at: The refresh token expiration date.
+    """
     
     __tablename__ = "user_sessions"
     

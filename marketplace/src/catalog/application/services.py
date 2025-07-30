@@ -1,7 +1,9 @@
 """Application services for catalog domain."""
 
+# Python imports
 from typing import List, Optional
 
+# Local imports
 from src.catalog.domain.entities import Brand, Category, Product
 from src.catalog.domain.events import (
     BrandCreated,
@@ -28,7 +30,10 @@ from src.shared.domain.exceptions import EntityNotFoundError, BusinessRuleViolat
 
 
 class CatalogService:
-    """Application service for catalog domain."""
+    """Application service for catalog domain.
+    
+    This service provides methods for managing products, categories, and brands.
+    """
 
     def __init__(
         self,
@@ -36,7 +41,8 @@ class CatalogService:
         category_repository: CategoryRepository,
         brand_repository: BrandRepository,
         event_bus: Optional[EventBus] = None,
-    ):
+    ) -> None:
+        """Initialize the catalog service."""
         self.product_repository = product_repository
         self.category_repository = category_repository
         self.brand_repository = brand_repository
@@ -51,7 +57,20 @@ class CatalogService:
         sku: str,
         brand_id: Optional[BrandId] = None,
     ) -> Product:
-        """Create a new product."""
+        """
+        Create a new product.
+        
+        Args:
+            name: The name of the product.
+            description: The description of the product.
+            price: The price of the product.
+            category_id: The ID of the category.
+            sku: The SKU of the product.
+            brand_id: The ID of the brand.
+            
+        Returns:
+            Product: The created product.
+        """
         # Validate that category exists
         category = await self.category_repository.get_by_id(category_id)
         if not category:
@@ -93,14 +112,31 @@ class CatalogService:
         return saved_product
 
     async def get_product(self, product_id: str) -> Product:
-        """Get product by ID."""
+        """
+        Get product by ID.
+        
+        Args:
+            product_id: The ID of the product to get.
+            
+        Returns:
+            Product: The product.
+        """
         product = await self.product_repository.get_by_id(ProductId(value=product_id))
         if not product:
             raise EntityNotFoundError(f"Product with ID {product_id} not found")
         return product
 
     async def update_product_price(self, product_id: str, new_price: Price) -> Product:
-        """Update product price."""
+        """
+        Update product price.
+        
+        Args:
+            product_id: The ID of the product to update.
+            new_price: The new price of the product.
+            
+        Returns:
+            Product: The updated product.
+        """
         product = await self.get_product(product_id)
         old_price = product.price
         product.update_price(new_price)
@@ -120,9 +156,20 @@ class CatalogService:
         return saved_product
 
     async def deactivate_product(
-        self, product_id: str, reason: Optional[str] = None
+        self,
+        product_id: str,
+        reason: Optional[str] = None
     ) -> Product:
-        """Deactivate product."""
+        """
+        Deactivate product.
+        
+        Args:
+            product_id: The ID of the product to deactivate.
+            reason: The reason for deactivation.
+            
+        Returns:
+            Product: The deactivated product.
+        """
         product = await self.get_product(product_id)
         product.deactivate()
 
@@ -145,12 +192,22 @@ class CatalogService:
         description: Optional[str] = None,
         parent_id: Optional[CategoryId] = None,
     ) -> Category:
-        """Create a new category."""
+        """
+        Create a new category.
+        
+        Args:
+            name: The name of the category.
+            description: The description of the category.
+            parent_id: The ID of the parent category.
+            
+        Returns:
+            Category: The created category.
+        """
         # Validate that parent category exists if provided
         if parent_id:
             parent_category = await self.category_repository.get_by_id(parent_id)
             if not parent_category:
-                raise ValidationError(f"Parent category with ID {parent_id} not found")
+                raise BusinessRuleViolationError(f"Parent category with ID {parent_id} not found")
 
         category = Category(
             name=name,
@@ -179,7 +236,15 @@ class CatalogService:
         return saved_category
 
     async def get_category(self, category_id: str) -> Category:
-        """Get category by ID."""
+        """
+        Get category by ID.
+        
+        Args:
+            category_id: The ID of the category to get.
+            
+        Returns:
+            Category: The category.
+        """
         category = await self.category_repository.get_by_id(
             CategoryId(value=category_id)
         )
@@ -193,7 +258,17 @@ class CatalogService:
         description: Optional[str] = None,
         logo_url: Optional[str] = None,
     ) -> Brand:
-        """Create a new brand."""
+        """
+        Create a new brand.
+        
+        Args:
+            name: The name of the brand.
+            description: The description of the brand.
+            logo_url: The logo URL of the brand.
+            
+        Returns:
+            Brand: The created brand.
+        """
         brand = Brand(
             name=name,
             description=description,
@@ -218,18 +293,42 @@ class CatalogService:
         return saved_brand
 
     async def get_brand(self, brand_id: str) -> Brand:
-        """Get brand by ID."""
+        """
+        Get brand by ID.
+        
+        Args:
+            brand_id: The ID of the brand to get.
+            
+        Returns:
+            Brand: The brand.
+        """
         brand = await self.brand_repository.get_by_id(BrandId(value=brand_id))
         if not brand:
             raise EntityNotFoundError(f"Brand with ID {brand_id} not found")
         return brand
 
     async def get_products_by_category(self, category_id: str) -> List[Product]:
-        """Get products by category."""
+        """
+        Get products by category.
+        
+        Args:
+            category_id: The ID of the category to get products for.
+            
+        Returns:
+            List[Product]: The products in the category.
+        """
         return await self.product_repository.get_by_category(
             CategoryId(value=category_id)
         )
 
     async def get_products_by_brand(self, brand_id: str) -> List[Product]:
-        """Get products by brand."""
+        """
+        Get products by brand.
+        
+        Args:
+            brand_id: The ID of the brand to get products for.
+            
+        Returns:
+            List[Product]: The products in the brand.
+        """
         return await self.product_repository.get_by_brand(BrandId(value=brand_id))

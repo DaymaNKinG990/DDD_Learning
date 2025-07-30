@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.users.application.services import UserService
-from src.users.infrastructure.repositories import InMemoryUserRepository
+from src.users.infrastructure.repositories import InMemoryUserRepository, InMemoryCustomerRepository, InMemorySellerRepository
 from src.interfaces.api.users_controllers import router as users_router
 from src.shared.infrastructure.database import close_db, init_db
 from src.shared.infrastructure.middleware import (

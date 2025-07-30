@@ -1,5 +1,6 @@
 """Catalog domain models."""
 
+# Local imports
 from .entities import Brand, Category, Product
 from .value_objects import (
     BrandId,

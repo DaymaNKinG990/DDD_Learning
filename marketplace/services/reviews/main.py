@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.reviews.application.services import ReviewService
-from src.reviews.infrastructure.repositories import InMemoryReviewRepository
+from src.reviews.infrastructure.repositories import InMemoryReviewRepository, InMemoryReviewResponseRepository, InMemoryReviewModerationRepository
 from src.interfaces.api.reviews_controllers import router as reviews_router
 from src.shared.infrastructure.database import close_db, init_db
 from src.shared.infrastructure.middleware import (

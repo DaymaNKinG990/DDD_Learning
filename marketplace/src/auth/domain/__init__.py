@@ -1,5 +1,6 @@
 """Authentication domain module."""
 
+# Python imports
 from .entities import TokenPair, UserSession
 from .events import (
     AccountLocked,

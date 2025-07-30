@@ -1,26 +1,46 @@
 """SQLAlchemy repository implementations for authentication domain."""
 
+# Python imports
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+# Local imports
 from src.auth.domain.entities import TokenPair, UserSession
 from src.auth.domain.repositories import SessionRepository, TokenRepository
-from src.auth.domain.value_objects import TokenId, TokenType
+from src.auth.domain.value_objects import AccessToken, RefreshToken, TokenId, TokenType
 from src.auth.infrastructure.models import TokenPairModel, UserSessionModel
 from src.shared.infrastructure.sql_repositories import SQLRepository
 from src.users.domain.value_objects import UserId
 
 
 class SQLTokenRepository(SQLRepository[TokenPairModel], TokenRepository):
-    """SQLAlchemy implementation of TokenRepository."""
+    """SQLAlchemy implementation of TokenRepository.
     
-    def __init__(self, session: AsyncSession):
+    This repository provides methods for managing token pairs.
+    """
+    
+    def __init__(self, session: AsyncSession) -> None:
+        """
+        Initialize the SQLTokenRepository.
+        
+        Args:
+            session: The SQLAlchemy session.
+        """
         super().__init__(session, TokenPairModel)
     
     async def save(self, token_pair: TokenPair) -> TokenPair:
-        """Save token pair to database."""
+        """
+        Save token pair to database.
+        
+        Args:
+            token_pair: The token pair to save.
+            
+        Returns:
+            TokenPair: The saved token pair.
+        """
         token_model = TokenPairModel(
             id=token_pair.id.value,
             user_id=token_pair.user_id.value,
@@ -46,7 +66,15 @@ class SQLTokenRepository(SQLRepository[TokenPairModel], TokenRepository):
         )
     
     async def get_by_id(self, token_id: TokenId) -> Optional[TokenPair]:
-        """Get token pair by ID."""
+        """
+        Get token pair by ID.
+        
+        Args:
+            token_id: The ID of the token pair to get.
+            
+        Returns:
+            Optional[TokenPair]: The token pair if found, None otherwise.
+        """
         token_model = await super().get_by_id(token_id.value)
         if not token_model:
             return None
@@ -54,7 +82,15 @@ class SQLTokenRepository(SQLRepository[TokenPairModel], TokenRepository):
         return self._model_to_entity(token_model)
     
     async def get_by_user_id(self, user_id: UserId) -> List[TokenPair]:
-        """Get all token pairs for a user."""
+        """
+        Get all token pairs for a user.
+        
+        Args:
+            user_id: The ID of the user to get token pairs for.
+            
+        Returns:
+            List[TokenPair]: The list of token pairs for the user.
+        """
         stmt = select(TokenPairModel).where(TokenPairModel.user_id == user_id.value)
         result = await self.session.execute(stmt)
         token_models = result.scalars().all()
@@ -62,7 +98,15 @@ class SQLTokenRepository(SQLRepository[TokenPairModel], TokenRepository):
         return [self._model_to_entity(model) for model in token_models]
     
     async def get_by_access_token(self, access_token: str) -> Optional[TokenPair]:
-        """Get token pair by access token."""
+        """
+        Get token pair by access token.
+        
+        Args:
+            access_token: The access token to get the token pair for.
+            
+        Returns:
+            Optional[TokenPair]: The token pair if found, None otherwise.
+        """
         stmt = select(TokenPairModel).where(TokenPairModel.access_token == access_token)
         result = await self.session.execute(stmt)
         token_model = result.scalar_one_or_none()
@@ -73,7 +117,15 @@ class SQLTokenRepository(SQLRepository[TokenPairModel], TokenRepository):
         return self._model_to_entity(token_model)
     
     async def get_by_refresh_token(self, refresh_token: str) -> Optional[TokenPair]:
-        """Get token pair by refresh token."""
+        """
+        Get token pair by refresh token.
+        
+        Args:
+            refresh_token: The refresh token to get the token pair for.
+            
+        Returns:
+            Optional[TokenPair]: The token pair if found, None otherwise.
+        """
         stmt = select(TokenPairModel).where(TokenPairModel.refresh_token == refresh_token)
         result = await self.session.execute(stmt)
         token_model = result.scalar_one_or_none()
@@ -84,7 +136,15 @@ class SQLTokenRepository(SQLRepository[TokenPairModel], TokenRepository):
         return self._model_to_entity(token_model)
     
     async def revoke_token(self, token_id: TokenId) -> bool:
-        """Revoke a token pair."""
+        """
+        Revoke a token pair.
+        
+        Args:
+            token_id: The ID of the token pair to revoke.
+            
+        Returns:
+            bool: True if the token pair was revoked, False otherwise.
+        """
         stmt = (
             update(TokenPairModel)
             .where(TokenPairModel.id == token_id.value)
@@ -95,7 +155,15 @@ class SQLTokenRepository(SQLRepository[TokenPairModel], TokenRepository):
         return result.rowcount > 0
     
     async def revoke_all_user_tokens(self, user_id: UserId) -> bool:
-        """Revoke all tokens for a user."""
+        """
+        Revoke all tokens for a user.
+        
+        Args:
+            user_id: The ID of the user to revoke tokens for.
+            
+        Returns:
+            bool: True if all tokens were revoked, False otherwise.
+        """
         stmt = (
             update(TokenPairModel)
             .where(TokenPairModel.user_id == user_id.value)
@@ -106,12 +174,15 @@ class SQLTokenRepository(SQLRepository[TokenPairModel], TokenRepository):
         return result.rowcount > 0
     
     async def delete_expired_tokens(self) -> int:
-        """Delete expired tokens and return count of deleted tokens."""
-        from datetime import datetime
+        """
+        Delete expired tokens and return count of deleted tokens.
         
+        Returns:
+            int: The number of deleted tokens.
+        """
         stmt = select(TokenPairModel).where(
-            (TokenPairModel.access_token_expires_at < datetime.utcnow()) |
-            (TokenPairModel.refresh_token_expires_at < datetime.utcnow())
+            (TokenPairModel.access_token_expires_at < datetime.now(timezone.utc)) |
+            (TokenPairModel.refresh_token_expires_at < datetime.now(timezone.utc))
         )
         result = await self.session.execute(stmt)
         expired_tokens = result.scalars().all()
@@ -123,9 +194,15 @@ class SQLTokenRepository(SQLRepository[TokenPairModel], TokenRepository):
         return len(expired_tokens)
     
     def _model_to_entity(self, model: TokenPairModel) -> TokenPair:
-        """Convert SQLAlchemy model to domain entity."""
-        from src.auth.domain.value_objects import AccessToken, RefreshToken
+        """
+        Convert SQLAlchemy model to domain entity.
         
+        Args:
+            model: The SQLAlchemy model to convert.
+            
+        Returns:
+            TokenPair: The domain entity.
+        """
         return TokenPair(
             id=TokenId(value=model.id),
             user_id=UserId(value=model.user_id),
@@ -139,13 +216,30 @@ class SQLTokenRepository(SQLRepository[TokenPairModel], TokenRepository):
 
 
 class SQLSessionRepository(SQLRepository[UserSessionModel], SessionRepository):
-    """SQLAlchemy implementation of SessionRepository."""
+    """SQLAlchemy implementation of SessionRepository.
     
-    def __init__(self, session: AsyncSession):
+    This repository provides methods for managing user sessions.
+    """
+    
+    def __init__(self, session: AsyncSession) -> None:
+        """
+        Initialize the SQLSessionRepository.
+        
+        Args:
+            session: The SQLAlchemy session.
+        """
         super().__init__(session, UserSessionModel)
     
     async def save(self, session: UserSession) -> UserSession:
-        """Save user session to database."""
+        """
+        Save user session to database.
+        
+        Args:
+            session: The user session to save.
+            
+        Returns:
+            UserSession: The saved user session.
+        """
         session_model = UserSessionModel(
             id=session.id.value,
             user_id=session.user_id.value,
@@ -162,7 +256,15 @@ class SQLSessionRepository(SQLRepository[UserSessionModel], SessionRepository):
         return self._model_to_entity(saved_model)
     
     async def get_by_id(self, session_id: TokenId) -> Optional[UserSession]:
-        """Get session by ID."""
+        """
+        Get session by ID.
+        
+        Args:
+            session_id: The ID of the session to get.
+            
+        Returns:
+            Optional[UserSession]: The session if found, None otherwise.
+        """
         session_model = await super().get_by_id(session_id.value)
         if not session_model:
             return None
@@ -170,7 +272,15 @@ class SQLSessionRepository(SQLRepository[UserSessionModel], SessionRepository):
         return self._model_to_entity(session_model)
     
     async def get_by_user_id(self, user_id: UserId) -> List[UserSession]:
-        """Get all sessions for a user."""
+        """
+        Get all sessions for a user.
+        
+        Args:
+            user_id: The ID of the user to get sessions for.
+            
+        Returns:
+            List[UserSession]: The list of sessions for the user.
+        """
         stmt = select(UserSessionModel).where(UserSessionModel.user_id == user_id.value)
         result = await self.session.execute(stmt)
         session_models = result.scalars().all()
@@ -178,7 +288,15 @@ class SQLSessionRepository(SQLRepository[UserSessionModel], SessionRepository):
         return [self._model_to_entity(model) for model in session_models]
     
     async def get_by_refresh_token(self, refresh_token: str) -> Optional[UserSession]:
-        """Get session by refresh token."""
+        """
+        Get session by refresh token.
+        
+        Args:
+            refresh_token: The refresh token to get the session for.
+            
+        Returns:
+            Optional[UserSession]: The session if found, None otherwise.
+        """
         stmt = select(UserSessionModel).where(UserSessionModel.refresh_token == refresh_token)
         result = await self.session.execute(stmt)
         session_model = result.scalar_one_or_none()
@@ -189,7 +307,15 @@ class SQLSessionRepository(SQLRepository[UserSessionModel], SessionRepository):
         return self._model_to_entity(session_model)
     
     async def deactivate_session(self, session_id: TokenId) -> bool:
-        """Deactivate a session."""
+        """
+        Deactivate a session.
+        
+        Args:
+            session_id: The ID of the session to deactivate.
+            
+        Returns:
+            bool: True if the session was deactivated, False otherwise.
+        """
         stmt = (
             update(UserSessionModel)
             .where(UserSessionModel.id == session_id.value)
@@ -200,7 +326,15 @@ class SQLSessionRepository(SQLRepository[UserSessionModel], SessionRepository):
         return result.rowcount > 0
     
     async def deactivate_all_user_sessions(self, user_id: UserId) -> bool:
-        """Deactivate all sessions for a user."""
+        """
+        Deactivate all sessions for a user.
+        
+        Args:
+            user_id: The ID of the user to deactivate sessions for.
+            
+        Returns:
+            bool: True if all sessions were deactivated, False otherwise.
+        """
         stmt = (
             update(UserSessionModel)
             .where(UserSessionModel.user_id == user_id.value)
@@ -211,24 +345,33 @@ class SQLSessionRepository(SQLRepository[UserSessionModel], SessionRepository):
         return result.rowcount > 0
     
     async def update_session_activity(self, session_id: TokenId) -> bool:
-        """Update session last activity."""
-        from datetime import datetime
+        """
+        Update session last activity.
         
+        Args:
+            session_id: The ID of the session to update.
+            
+        Returns:
+            bool: True if the session activity was updated, False otherwise.
+        """
         stmt = (
             update(UserSessionModel)
             .where(UserSessionModel.id == session_id.value)
-            .values(last_activity=datetime.utcnow())
+            .values(last_activity=datetime.now(timezone.utc))
         )
         result = await self.session.execute(stmt)
         await self.session.commit()
         return result.rowcount > 0
     
     async def delete_expired_sessions(self) -> int:
-        """Delete expired sessions and return count of deleted sessions."""
-        from datetime import datetime
+        """
+        Delete expired sessions and return count of deleted sessions.
         
+        Returns:
+            int: The number of deleted sessions.
+        """
         stmt = select(UserSessionModel).where(
-            UserSessionModel.refresh_token_expires_at < datetime.utcnow()
+            UserSessionModel.refresh_token_expires_at < datetime.now(timezone.utc)
         )
         result = await self.session.execute(stmt)
         expired_sessions = result.scalars().all()
@@ -240,9 +383,15 @@ class SQLSessionRepository(SQLRepository[UserSessionModel], SessionRepository):
         return len(expired_sessions)
     
     def _model_to_entity(self, model: UserSessionModel) -> UserSession:
-        """Convert SQLAlchemy model to domain entity."""
-        from src.auth.domain.value_objects import RefreshToken
+        """
+        Convert SQLAlchemy model to domain entity.
         
+        Args:
+            model: The SQLAlchemy model to convert.
+            
+        Returns:
+            UserSession: The domain entity.
+        """
         return UserSession(
             id=TokenId(value=model.id),
             user_id=UserId(value=model.user_id),
