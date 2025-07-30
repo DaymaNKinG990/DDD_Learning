@@ -1,11 +1,18 @@
 """Catalog domain models."""
 
-from .entities import Product, Category, Brand
-from .value_objects import ProductId, CategoryId, BrandId, Price, ProductName, ProductDescription
+from .entities import Brand, Category, Product
+from .value_objects import (
+    BrandId,
+    CategoryId,
+    Price,
+    ProductDescription,
+    ProductId,
+    ProductName,
+)
 
 __all__ = [
     "Product",
-    "Category", 
+    "Category",
     "Brand",
     "ProductId",
     "CategoryId",

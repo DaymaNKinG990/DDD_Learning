@@ -1,41 +1,42 @@
 """Value objects for the orders domain."""
 
+from dataclasses import dataclass
 from decimal import Decimal
 from enum import Enum
-from typing import Any
-
-from pydantic import Field, field_validator
+from typing import Union
 
 from src.shared.domain.value_object import ValueObject
 
 
+@dataclass(frozen=True)
 class OrderId(ValueObject):
     """Order identifier value object."""
-    
-    value: str = Field(description="Order identifier")
-    
+
+    value: str
+
     def __hash__(self) -> int:
         return hash(self.value)
-    
+
     def __str__(self) -> str:
         return self.value
 
 
+@dataclass(frozen=True)
 class OrderItemId(ValueObject):
     """Order item identifier value object."""
-    
-    value: str = Field(description="Order item identifier")
-    
+
+    value: str
+
     def __hash__(self) -> int:
         return hash(self.value)
-    
+
     def __str__(self) -> str:
         return self.value
 
 
 class OrderStatus(str, Enum):
     """Order status enumeration."""
-    
+
     PENDING = "pending"
     CONFIRMED = "confirmed"
     PROCESSING = "processing"
@@ -45,58 +46,69 @@ class OrderStatus(str, Enum):
     REFUNDED = "refunded"
 
 
+@dataclass(frozen=True)
 class OrderTotal(ValueObject):
     """Order total value object."""
-    
-    subtotal: Decimal = Field(description="Subtotal amount")
-    tax: Decimal = Field(description="Tax amount")
-    shipping: Decimal = Field(description="Shipping cost")
-    discount: Decimal = Field(default=Decimal("0"), description="Discount amount")
-    total: Decimal = Field(description="Total amount")
-    currency: str = Field(default="RUB", description="Currency code")
-    
-    @field_validator("subtotal", "tax", "shipping", "discount", "total")
-    @classmethod
-    def validate_amounts(cls, v: Any) -> Decimal:
-        """Validate monetary amounts."""
-        if not isinstance(v, Decimal):
-            v = Decimal(str(v))
-        if v < 0:
-            raise ValueError("Amount cannot be negative")
-        return v
-    
-    @field_validator("currency")
-    @classmethod
-    def validate_currency(cls, v: str) -> str:
-        """Validate currency code."""
-        if not v or len(v) != 3:
+
+    subtotal: Decimal
+    tax: Decimal
+    shipping: Decimal
+    discount: Decimal = Decimal("0")
+    total: Decimal = Decimal("0")
+    currency: str = "RUB"
+
+    def __post_init__(self) -> None:
+        """Validate monetary amounts after initialization."""
+        if self.subtotal < 0:
+            raise ValueError("Subtotal cannot be negative")
+        if self.tax < 0:
+            raise ValueError("Tax cannot be negative")
+        if self.shipping < 0:
+            raise ValueError("Shipping cannot be negative")
+        if self.discount < 0:
+            raise ValueError("Discount cannot be negative")
+        if self.total < 0:
+            raise ValueError("Total cannot be negative")
+        if not self.currency or len(self.currency) != 3:
             raise ValueError("Currency must be a 3-letter code")
-        return v.upper()
-    
+
     def __hash__(self) -> int:
-        return hash((self.subtotal, self.tax, self.shipping, self.discount, self.total, self.currency))
-    
+        return hash((
+            self.subtotal,
+            self.tax,
+            self.shipping,
+            self.discount,
+            self.total,
+            self.currency
+        ))
+
     def __str__(self) -> str:
         return f"{self.total} {self.currency}"
-    
+
     @classmethod
     def calculate(
         cls,
-        subtotal: Decimal,
-        tax_rate: Decimal = Decimal("0.20"),  # 20% VAT
-        shipping_cost: Decimal = Decimal("0"),
-        discount: Decimal = Decimal("0"),
+        subtotal: Union[Decimal, float, str],
+        tax_rate: Union[Decimal, float, str] = Decimal("0.20"),  # 20% VAT
+        shipping_cost: Union[Decimal, float, str] = Decimal("0"),
+        discount: Union[Decimal, float, str] = Decimal("0"),
         currency: str = "RUB",
     ) -> "OrderTotal":
         """Calculate order total from components."""
-        tax = subtotal * tax_rate
-        total = subtotal + tax + shipping_cost - discount
-        
+        # Convert all inputs to Decimal
+        subtotal_decimal = Decimal(str(subtotal))
+        tax_rate_decimal = Decimal(str(tax_rate))
+        shipping_decimal = Decimal(str(shipping_cost))
+        discount_decimal = Decimal(str(discount))
+
+        tax = subtotal_decimal * tax_rate_decimal
+        total = subtotal_decimal + tax + shipping_decimal - discount_decimal
+
         return cls(
-            subtotal=subtotal,
+            subtotal=subtotal_decimal,
             tax=tax,
-            shipping=shipping_cost,
-            discount=discount,
+            shipping=shipping_decimal,
+            discount=discount_decimal,
             total=total,
-            currency=currency,
+            currency=currency.upper(),
         )

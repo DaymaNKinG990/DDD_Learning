@@ -7,7 +7,7 @@ __all__ = [
     "Order",
     "OrderItem",
     "OrderId",
-    "OrderItemId", 
+    "OrderItemId",
     "OrderStatus",
     "OrderTotal",
 ]

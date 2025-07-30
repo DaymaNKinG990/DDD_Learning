@@ -1,7 +1,7 @@
 """Users domain models."""
 
-from .entities import User, Customer, Seller
-from .value_objects import UserId, CustomerId, SellerId, Email, PhoneNumber
+from .entities import Customer, Seller, User
+from .value_objects import CustomerId, Email, PhoneNumber, SellerId, UserId
 
 __all__ = [
     "User", "Customer", "Seller",

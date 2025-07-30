@@ -1,7 +1,7 @@
 """Payments domain models."""
 
 from .entities import Payment, PaymentMethod
-from .value_objects import PaymentId, PaymentMethodId, PaymentStatus, Amount
+from .value_objects import Amount, PaymentId, PaymentMethodId, PaymentStatus
 
 __all__ = [
     "Payment", "PaymentMethod",

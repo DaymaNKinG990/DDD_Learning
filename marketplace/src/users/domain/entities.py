@@ -1,140 +1,92 @@
 """Entities for the users domain."""
 
-from datetime import datetime
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import Optional
-
-from pydantic import Field
 
 from src.shared.domain.entity import Entity
 
 from .value_objects import CustomerId, Email, PhoneNumber, SellerId, UserId
 
 
+@dataclass
 class User(Entity[UserId]):
     """Base user entity."""
-    
-    email: Email = Field(description="User email")
-    first_name: str = Field(description="First name")
-    last_name: str = Field(description="Last name")
-    phone_number: Optional[PhoneNumber] = Field(default=None, description="Phone number")
-    is_active: bool = Field(default=True, description="User status")
-    created_at: datetime = Field(default_factory=datetime.utcnow, description="Creation timestamp")
-    updated_at: datetime = Field(default_factory=datetime.utcnow, description="Last update timestamp")
-    
+
+    email: Email
+    first_name: str
+    last_name: str
+    phone_number: Optional[PhoneNumber] = None
+    is_active: bool = True
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
     def __hash__(self) -> int:
         return hash(self.id)
-    
+
     @property
     def full_name(self) -> str:
         """Get user's full name."""
         return f"{self.first_name} {self.last_name}"
-    
-    def deactivate(self) -> "User":
+
+    def deactivate(self) -> None:
         """Deactivate user."""
-        return User(
-            id=self.id,
-            email=self.email,
-            first_name=self.first_name,
-            last_name=self.last_name,
-            phone_number=self.phone_number,
-            is_active=False,
-            created_at=self.created_at,
-            updated_at=datetime.utcnow(),
-        )
-    
-    def activate(self) -> "User":
+        self.is_active = False
+        self.updated_at = datetime.now(UTC)
+
+    def activate(self) -> None:
         """Activate user."""
-        return User(
-            id=self.id,
-            email=self.email,
-            first_name=self.first_name,
-            last_name=self.last_name,
-            phone_number=self.phone_number,
-            is_active=True,
-            created_at=self.created_at,
-            updated_at=datetime.utcnow(),
-        )
+        self.is_active = True
+        self.updated_at = datetime.now(UTC)
 
 
+@dataclass
 class Customer(Entity[CustomerId]):
     """Customer entity."""
-    
-    user_id: UserId = Field(description="Associated user")
-    shipping_addresses: list[str] = Field(default_factory=list, description="Shipping addresses")
-    billing_addresses: list[str] = Field(default_factory=list, description="Billing addresses")
-    preferences: dict = Field(default_factory=dict, description="Customer preferences")
-    created_at: datetime = Field(default_factory=datetime.utcnow, description="Creation timestamp")
-    updated_at: datetime = Field(default_factory=datetime.utcnow, description="Last update timestamp")
-    
+
+    user_id: UserId
+    shipping_addresses: list[str] = field(default_factory=list)
+    billing_addresses: list[str] = field(default_factory=list)
+    preferences: dict = field(default_factory=dict)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
     def __hash__(self) -> int:
         return hash(self.id)
-    
-    def add_shipping_address(self, address: str) -> "Customer":
+
+    def add_shipping_address(self, address: str) -> None:
         """Add shipping address."""
-        new_addresses = self.shipping_addresses + [address]
-        return Customer(
-            id=self.id,
-            user_id=self.user_id,
-            shipping_addresses=new_addresses,
-            billing_addresses=self.billing_addresses,
-            preferences=self.preferences,
-            created_at=self.created_at,
-            updated_at=datetime.utcnow(),
-        )
-    
-    def add_billing_address(self, address: str) -> "Customer":
+        self.shipping_addresses.append(address)
+        self.updated_at = datetime.now(UTC)
+
+    def add_billing_address(self, address: str) -> None:
         """Add billing address."""
-        new_addresses = self.billing_addresses + [address]
-        return Customer(
-            id=self.id,
-            user_id=self.user_id,
-            shipping_addresses=self.shipping_addresses,
-            billing_addresses=new_addresses,
-            preferences=self.preferences,
-            created_at=self.created_at,
-            updated_at=datetime.utcnow(),
-        )
+        self.billing_addresses.append(address)
+        self.updated_at = datetime.now(UTC)
 
 
+@dataclass
 class Seller(Entity[SellerId]):
     """Seller entity."""
-    
-    user_id: UserId = Field(description="Associated user")
-    company_name: str = Field(description="Company name")
-    company_description: Optional[str] = Field(default=None, description="Company description")
-    business_address: str = Field(description="Business address")
-    tax_id: Optional[str] = Field(default=None, description="Tax identification number")
-    is_verified: bool = Field(default=False, description="Verification status")
-    created_at: datetime = Field(default_factory=datetime.utcnow, description="Creation timestamp")
-    updated_at: datetime = Field(default_factory=datetime.utcnow, description="Last update timestamp")
-    
+
+    user_id: UserId
+    company_name: str
+    business_address: str
+    company_description: Optional[str] = None
+    tax_id: Optional[str] = None
+    is_verified: bool = False
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
     def __hash__(self) -> int:
         return hash(self.id)
-    
-    def verify(self) -> "Seller":
+
+    def verify(self) -> None:
         """Verify seller."""
-        return Seller(
-            id=self.id,
-            user_id=self.user_id,
-            company_name=self.company_name,
-            company_description=self.company_description,
-            business_address=self.business_address,
-            tax_id=self.tax_id,
-            is_verified=True,
-            created_at=self.created_at,
-            updated_at=datetime.utcnow(),
-        )
-    
-    def unverify(self) -> "Seller":
+        self.is_verified = True
+        self.updated_at = datetime.now(UTC)
+
+    def unverify(self) -> None:
         """Unverify seller."""
-        return Seller(
-            id=self.id,
-            user_id=self.user_id,
-            company_name=self.company_name,
-            company_description=self.company_description,
-            business_address=self.business_address,
-            tax_id=self.tax_id,
-            is_verified=False,
-            created_at=self.created_at,
-            updated_at=datetime.utcnow(),
-        )
+        self.is_verified = False
+        self.updated_at = datetime.now(UTC)

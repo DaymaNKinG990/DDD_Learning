@@ -27,6 +27,7 @@ dependencies = [
     "pytest-asyncio>=0.21.0",
     "factory-boy>=3.3.0",
     "freezegun>=1.2.0",
+    "asyncpg>=0.30.0",
 ]
 
 [project.optional-dependencies]
@@ -65,3 +66,8 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.12.7",
+]

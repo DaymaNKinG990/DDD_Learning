@@ -1,89 +1,90 @@
 """Value objects for the users domain."""
 
-from typing import Any
-
-from pydantic import Field, field_validator
+from dataclasses import dataclass
 
 from src.shared.domain.value_object import ValueObject
 
 
+@dataclass(frozen=True)
 class UserId(ValueObject):
     """User identifier value object."""
-    
-    value: str = Field(description="User identifier")
-    
+
+    value: str
+
     def __hash__(self) -> int:
         return hash(self.value)
-    
+
     def __str__(self) -> str:
         return self.value
 
 
+@dataclass(frozen=True)
 class CustomerId(ValueObject):
     """Customer identifier value object."""
-    
-    value: str = Field(description="Customer identifier")
-    
+
+    value: str
+
     def __hash__(self) -> int:
         return hash(self.value)
-    
+
     def __str__(self) -> str:
         return self.value
 
 
+@dataclass(frozen=True)
 class SellerId(ValueObject):
     """Seller identifier value object."""
-    
-    value: str = Field(description="Seller identifier")
-    
+
+    value: str
+
     def __hash__(self) -> int:
         return hash(self.value)
-    
+
     def __str__(self) -> str:
         return self.value
 
 
+@dataclass(frozen=True)
 class Email(ValueObject):
     """Email value object."""
-    
-    value: str = Field(description="Email address")
-    
-    @field_validator("value")
-    @classmethod
-    def validate_email(cls, v: str) -> str:
-        """Validate email format."""
-        if not v or not v.strip():
+
+    value: str
+
+    def __post_init__(self) -> None:
+        """Validate email format after initialization."""
+        if not self.value or not self.value.strip():
             raise ValueError("Email cannot be empty")
-        if "@" not in v or "." not in v:
+        if "@" not in self.value or "." not in self.value:
             raise ValueError("Invalid email format")
-        return v.lower().strip()
-    
+        # Normalize email to lowercase
+        object.__setattr__(self, "value", self.value.lower().strip())
+
     def __hash__(self) -> int:
         return hash(self.value)
-    
+
     def __str__(self) -> str:
         return self.value
 
 
+@dataclass(frozen=True)
 class PhoneNumber(ValueObject):
     """Phone number value object."""
-    
-    value: str = Field(description="Phone number")
-    
-    @field_validator("value")
-    @classmethod
-    def validate_phone(cls, v: str) -> str:
-        """Validate phone number format."""
-        if not v or not v.strip():
+
+    value: str
+
+    def __post_init__(self) -> None:
+        """Validate phone number format after initialization."""
+        if not self.value or not self.value.strip():
             raise ValueError("Phone number cannot be empty")
         # Remove all non-digit characters
-        digits_only = "".join(filter(str.isdigit, v))
+        digits_only = "".join(filter(str.isdigit, self.value))
         if len(digits_only) < 10:
             raise ValueError("Phone number too short")
-        return digits_only
-    
+        # Store normalized phone number
+        object.__setattr__(self, "value", digits_only)
+
     def __hash__(self) -> int:
         return hash(self.value)
-    
+
     def __str__(self) -> str:
         return self.value

@@ -1,11 +1,10 @@
 """Entities for the catalog domain."""
 
-from datetime import datetime
-from typing import List, Optional
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from typing import Optional
 
-from pydantic import Field
-
-from src.shared.domain.entity import Entity, EntityId
+from src.shared.domain.entity import Entity
 
 from .value_objects import (
     BrandId,
@@ -17,120 +16,79 @@ from .value_objects import (
 )
 
 
+@dataclass
 class Product(Entity[ProductId]):
     """Product entity."""
-    
-    name: ProductName = Field(description="Product name")
-    description: ProductDescription = Field(description="Product description")
-    price: Price = Field(description="Product price")
-    category_id: CategoryId = Field(description="Product category")
-    brand_id: Optional[BrandId] = Field(default=None, description="Product brand")
-    sku: str = Field(description="Stock keeping unit")
-    is_active: bool = Field(default=True, description="Product availability")
-    created_at: datetime = Field(default_factory=datetime.utcnow, description="Creation timestamp")
-    updated_at: datetime = Field(default_factory=datetime.utcnow, description="Last update timestamp")
-    
+
+    name: ProductName
+    description: ProductDescription
+    price: Price
+    category_id: CategoryId
+    brand_id: Optional[BrandId] = None
+    sku: str = ""
+    is_active: bool = True
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
     def __hash__(self) -> int:
         return hash(self.id)
-    
-    def update_price(self, new_price: Price) -> "Product":
+
+    def update_price(self, new_price: Price) -> None:
         """Update product price."""
-        return Product(
-            id=self.id,
-            name=self.name,
-            description=self.description,
-            price=new_price,
-            category_id=self.category_id,
-            brand_id=self.brand_id,
-            sku=self.sku,
-            is_active=self.is_active,
-            created_at=self.created_at,
-            updated_at=datetime.utcnow(),
-        )
-    
-    def deactivate(self) -> "Product":
+        self.price = new_price
+        self.updated_at = datetime.now(UTC)
+
+    def deactivate(self) -> None:
         """Deactivate product."""
-        return Product(
-            id=self.id,
-            name=self.name,
-            description=self.description,
-            price=self.price,
-            category_id=self.category_id,
-            brand_id=self.brand_id,
-            sku=self.sku,
-            is_active=False,
-            created_at=self.created_at,
-            updated_at=datetime.utcnow(),
-        )
-    
-    def activate(self) -> "Product":
+        self.is_active = False
+        self.updated_at = datetime.now(UTC)
+
+    def activate(self) -> None:
         """Activate product."""
-        return Product(
-            id=self.id,
-            name=self.name,
-            description=self.description,
-            price=self.price,
-            category_id=self.category_id,
-            brand_id=self.brand_id,
-            sku=self.sku,
-            is_active=True,
-            created_at=self.created_at,
-            updated_at=datetime.utcnow(),
-        )
+        self.is_active = True
+        self.updated_at = datetime.now(UTC)
 
 
+@dataclass
 class Category(Entity[CategoryId]):
     """Category entity."""
-    
-    name: str = Field(description="Category name")
-    description: Optional[str] = Field(default=None, description="Category description")
-    parent_id: Optional[CategoryId] = Field(default=None, description="Parent category")
-    is_active: bool = Field(default=True, description="Category availability")
-    created_at: datetime = Field(default_factory=datetime.utcnow, description="Creation timestamp")
-    updated_at: datetime = Field(default_factory=datetime.utcnow, description="Last update timestamp")
-    
+
+    name: str
+    description: Optional[str] = None
+    parent_id: Optional[CategoryId] = None
+    is_active: bool = True
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
     def __hash__(self) -> int:
         return hash(self.id)
-    
+
     def add_subcategory(self, subcategory: "Category") -> None:
         """Add subcategory to this category."""
         if subcategory.parent_id != self.id:
             raise ValueError("Subcategory must have this category as parent")
-    
-    def deactivate(self) -> "Category":
+
+    def deactivate(self) -> None:
         """Deactivate category."""
-        return Category(
-            id=self.id,
-            name=self.name,
-            description=self.description,
-            parent_id=self.parent_id,
-            is_active=False,
-            created_at=self.created_at,
-            updated_at=datetime.utcnow(),
-        )
+        self.is_active = False
+        self.updated_at = datetime.now(UTC)
 
 
+@dataclass
 class Brand(Entity[BrandId]):
     """Brand entity."""
-    
-    name: str = Field(description="Brand name")
-    description: Optional[str] = Field(default=None, description="Brand description")
-    logo_url: Optional[str] = Field(default=None, description="Brand logo URL")
-    is_active: bool = Field(default=True, description="Brand availability")
-    created_at: datetime = Field(default_factory=datetime.utcnow, description="Creation timestamp")
-    updated_at: datetime = Field(default_factory=datetime.utcnow, description="Last update timestamp")
-    
+
+    name: str
+    description: Optional[str] = None
+    logo_url: Optional[str] = None
+    is_active: bool = True
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
     def __hash__(self) -> int:
         return hash(self.id)
-    
-    def deactivate(self) -> "Brand":
+
+    def deactivate(self) -> None:
         """Deactivate brand."""
-        return Brand(
-            id=self.id,
-            name=self.name,
-            description=self.description,
-            logo_url=self.logo_url,
-            is_active=False,
-            created_at=self.created_at,
-            updated_at=datetime.utcnow(),
-        )
+        self.is_active = False
+        self.updated_at = datetime.now(UTC)

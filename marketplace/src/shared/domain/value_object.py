@@ -1,27 +1,23 @@
 """Base ValueObject class for all domain value objects."""
 
-from abc import ABC, abstractmethod
+from dataclasses import asdict, dataclass
 from typing import Any, Dict
 
-from pydantic import BaseModel, ConfigDict
 
-
-class ValueObject(BaseModel, ABC):
+@dataclass(frozen=True)
+class ValueObject:
     """Base class for all domain value objects."""
-    
-    model_config = ConfigDict(frozen=True)
-    
-    @abstractmethod
+
     def __hash__(self) -> int:
         """Return hash of the value object."""
-        pass
-    
+        return hash(tuple(sorted(asdict(self).items())))
+
     def __eq__(self, other: Any) -> bool:
         """Check if value objects are equal."""
         if not isinstance(other, self.__class__):
             return False
-        return self.model_dump() == other.model_dump()
-    
+        return asdict(self) == asdict(other)
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert value object to dictionary."""
-        return self.model_dump()
+        return asdict(self)

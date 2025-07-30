@@ -1,7 +1,7 @@
 """
 DDD Learning Course Package
 
-A comprehensive course on Domain-Driven Design (DDD) based on 
+A comprehensive course on Domain-Driven Design (DDD) based on
 Vlad Khononov's book "Learning Domain-Driven Design".
 """
 

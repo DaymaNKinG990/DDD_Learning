@@ -1,41 +1,42 @@
 """Value objects for the payments domain."""
 
+from dataclasses import dataclass
 from decimal import Decimal
 from enum import Enum
-from typing import Any
-
-from pydantic import Field, field_validator
+from typing import Union
 
 from src.shared.domain.value_object import ValueObject
 
 
+@dataclass(frozen=True)
 class PaymentId(ValueObject):
     """Payment identifier value object."""
-    
-    value: str = Field(description="Payment identifier")
-    
+
+    value: str
+
     def __hash__(self) -> int:
         return hash(self.value)
-    
+
     def __str__(self) -> str:
         return self.value
 
 
+@dataclass(frozen=True)
 class PaymentMethodId(ValueObject):
     """Payment method identifier value object."""
-    
-    value: str = Field(description="Payment method identifier")
-    
+
+    value: str
+
     def __hash__(self) -> int:
         return hash(self.value)
-    
+
     def __str__(self) -> str:
         return self.value
 
 
 class PaymentStatus(str, Enum):
     """Payment status enumeration."""
-    
+
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETED = "completed"
@@ -44,44 +45,44 @@ class PaymentStatus(str, Enum):
     REFUNDED = "refunded"
 
 
+@dataclass(frozen=True)
 class Amount(ValueObject):
     """Amount value object."""
-    
-    value: Decimal = Field(description="Amount value")
-    currency: str = Field(default="RUB", description="Currency code")
-    
-    @field_validator("value")
-    @classmethod
-    def validate_amount(cls, v: Any) -> Decimal:
-        """Validate amount."""
-        if not isinstance(v, Decimal):
-            v = Decimal(str(v))
-        if v < 0:
+
+    value: Decimal
+    currency: str
+
+    def __post_init__(self) -> None:
+        """Validate amount after initialization."""
+        if self.value < 0:
             raise ValueError("Amount cannot be negative")
-        return v
-    
-    @field_validator("currency")
-    @classmethod
-    def validate_currency(cls, v: str) -> str:
-        """Validate currency code."""
-        if not v or len(v) != 3:
+        if not self.currency or len(self.currency) != 3:
             raise ValueError("Currency must be a 3-letter code")
-        return v.upper()
-    
+        # Normalize currency to uppercase
+        object.__setattr__(self, "currency", self.currency.upper())
+
     def __hash__(self) -> int:
         return hash((self.value, self.currency))
-    
+
     def __str__(self) -> str:
         return f"{self.value} {self.currency}"
-    
+
     def __add__(self, other: "Amount") -> "Amount":
         """Add two amounts."""
         if self.currency != other.currency:
             raise ValueError("Cannot add amounts with different currencies")
         return Amount(value=self.value + other.value, currency=self.currency)
-    
+
     def __sub__(self, other: "Amount") -> "Amount":
         """Subtract two amounts."""
         if self.currency != other.currency:
             raise ValueError("Cannot subtract amounts with different currencies")
         return Amount(value=self.value - other.value, currency=self.currency)
+
+    @classmethod
+    def create(
+        cls, value: Union[Decimal, float, str], currency: str = "RUB"
+    ) -> "Amount":
+        """Create an amount from value and currency."""
+        value_decimal = Decimal(str(value))
+        return cls(value=value_decimal, currency=currency)

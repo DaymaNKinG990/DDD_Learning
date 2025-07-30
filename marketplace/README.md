@@ -4,6 +4,23 @@
 
 ## 🏗️ Архитектура
 
+Проект поддерживает две архитектуры:
+
+### 1. Монолитная архитектура (по умолчанию)
+- Один `main.py` для всего приложения
+- Все домены работают в одном процессе
+- Простота разработки и деплоя
+
+### 2. Микросервисная архитектура
+- Каждый домен = отдельный сервис
+- Свой `main.py` для каждого домена
+- API Gateway для объединения сервисов
+- Межсервисное общение через HTTP API
+
+Подробная документация по микросервисам: [README_MICROSERVICES.md](README_MICROSERVICES.md)
+
+## 🏗️ Архитектура
+
 Проект следует принципам DDD с разделением на ограниченные контексты:
 
 ### Ограниченные контексты
@@ -39,8 +56,9 @@
 
 - Python 3.12+
 - uv (менеджер пакетов)
+- Docker и Docker Compose
 
-### Установка
+### Монолитная архитектура
 
 ```bash
 # Клонирование репозитория
@@ -55,6 +73,19 @@ uv run pytest
 
 # Запуск приложения
 uv run uvicorn src.main:app --reload
+
+# Или через Docker
+docker-compose up -d
+```
+
+### Микросервисная архитектура
+
+```bash
+# Запуск всех микросервисов
+docker-compose -f docker-compose.microservices.yml up -d
+
+# Или отдельные сервисы
+docker-compose -f docker-compose.microservices.yml up -d catalog orders users
 ```
 
 ### Структура проекта
@@ -249,12 +280,11 @@ class Order(Entity[OrderId]):
 
 ## 📄 Лицензия
 
-MIT License
-
-## 🤝 Вклад в проект
+MIT License## 🤝 Вклад в проект
 
 1. Fork репозитория
 2. Создайте feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit изменения (`git commit -m 'Add amazing feature'`)
 4. Push в branch (`git push origin feature/amazing-feature`)
 5. Откройте Pull Request
+
