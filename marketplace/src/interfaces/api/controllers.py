@@ -1,10 +1,12 @@
 """API controllers for catalog and orders."""
 
+# Python imports
 from decimal import Decimal
 from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+
+# Local imports
 from src.catalog.application import CatalogService
 from src.catalog.domain.value_objects import BrandId, CategoryId, Price
 from src.catalog.infrastructure import (
@@ -21,6 +23,18 @@ from src.orders.infrastructure import (
 
 # Pydantic models for API requests/responses
 class CreateProductRequest(BaseModel):
+    """
+    Request model for creating a new product.
+
+    Attributes:
+        name (str): The name of the product.
+        description (str): The description of the product.
+        price (Decimal): The price of the product.  
+        category_id (str): The ID of the category.
+        sku (str): The stock keeping unit of the product.
+        brand_id (Optional[str]): The ID of the brand.
+    """
+
     name: str
     description: str
     price: Decimal
@@ -29,54 +43,117 @@ class CreateProductRequest(BaseModel):
     brand_id: Optional[str] = None
 
 class CreateCategoryRequest(BaseModel):
+    """
+    Request model for creating a new category.
+
+    Attributes:
+        name (str): The name of the category.
+        description (Optional[str]): The description of the category.
+        parent_id (Optional[str]): The ID of the parent category.   
+    """
+
     name: str
     description: Optional[str] = None
     parent_id: Optional[str] = None
 
 class CreateBrandRequest(BaseModel):
+    """
+    Request model for creating a new brand.
+
+    Attributes:
+        name (str): The name of the brand.
+        description (Optional[str]): The description of the brand.
+        logo_url (Optional[str]): The URL of the brand's logo.
+    """
+
     name: str
     description: Optional[str] = None
     logo_url: Optional[str] = None
 
 class CreateOrderRequest(BaseModel):
+    """
+    Request model for creating a new order.
+
+    Attributes:
+        customer_id (str): The ID of the customer.
+        shipping_address (str): The shipping address of the order.
+        billing_address (str): The billing address of the order.
+        notes (Optional[str]): The notes of the order.
+    """
+
     customer_id: str
     shipping_address: str
     billing_address: str
     notes: Optional[str] = None
 
 class AddOrderItemRequest(BaseModel):
+    """
+    Request model for adding an item to an order.
+
+    Attributes:
+        product_id (str): The ID of the product.
+        product_name (str): The name of the product.
+        quantity (int): The quantity of the product.
+        unit_price (Decimal): The unit price of the product.
+    """
+
     product_id: str
     product_name: str
     quantity: int
     unit_price: Decimal
 
+
 # API Routers
 catalog_router = APIRouter(prefix="/catalog", tags=["catalog"])
 orders_router = APIRouter(prefix="/orders", tags=["orders"])
 
+
 # Dependency injection
 def get_catalog_service() -> CatalogService:
-    """Get catalog service instance."""
+    """
+    Get catalog service instance.
+
+    Returns:
+        CatalogService: The catalog service instance.
+    """
+
     return CatalogService(
         product_repository=InMemoryProductRepository(),
         category_repository=InMemoryCategoryRepository(),
         brand_repository=InMemoryBrandRepository(),
     )
 
+
 def get_order_service() -> OrderService:
-    """Get order service instance."""
+    """
+    Get order service instance.
+
+    Returns:
+        OrderService: The order service instance.
+    """
+
     return OrderService(
         order_repository=InMemoryOrderRepository(),
         order_item_repository=InMemoryOrderItemRepository(),
     )
+
 
 # Catalog endpoints
 @catalog_router.post("/products", response_model=dict)
 async def create_product(
     request: CreateProductRequest,
     catalog_service: CatalogService = Depends(get_catalog_service),
-):
-    """Create a new product."""
+) -> dict[str, str | bool]:
+    """Create a new product.
+
+    Args:
+        request (CreateProductRequest): The request object containing product details.
+        catalog_service (CatalogService): The catalog service instance.
+
+    Returns:
+        dict[str, str | bool]: The response containing product details.
+    """
+
     try:
         price = Price(amount=request.price, currency="RUB")
         category_id = CategoryId(value=request.category_id)
@@ -104,12 +181,23 @@ async def create_product(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
 @catalog_router.get("/products/{product_id}", response_model=dict)
 async def get_product(
     product_id: str,
     catalog_service: CatalogService = Depends(get_catalog_service),
-):
-    """Get product by ID."""
+) -> dict[str, str | bool]:
+    """
+    Get product by ID.
+
+    Args:
+        product_id (str): The ID of the product.
+        catalog_service (CatalogService): The catalog service instance.
+
+    Returns:
+        dict[str, str | bool]: The response containing product details.
+    """
+
     try:
         product = await catalog_service.get_product(product_id)
         return {
@@ -125,12 +213,22 @@ async def get_product(
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
+
 @catalog_router.post("/categories", response_model=dict)
 async def create_category(
     request: CreateCategoryRequest,
     catalog_service: CatalogService = Depends(get_catalog_service),
-):
-    """Create a new category."""
+) -> dict[str, str | bool]:
+    """Create a new category.
+
+    Args:
+        request (CreateCategoryRequest): The request object containing category details.
+        catalog_service (CatalogService): The catalog service instance.
+
+    Returns:
+        dict[str, str | bool]: The response containing category details.
+    """
+
     try:
         parent_id = CategoryId(value=request.parent_id) if request.parent_id else None
 
@@ -149,12 +247,22 @@ async def create_category(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
 @catalog_router.post("/brands", response_model=dict)
 async def create_brand(
     request: CreateBrandRequest,
     catalog_service: CatalogService = Depends(get_catalog_service),
-):
-    """Create a new brand."""
+) -> dict[str, str | bool]:
+    """Create a new brand.
+
+    Args:
+        request (CreateBrandRequest): The request object containing brand details.
+        catalog_service (CatalogService): The catalog service instance.
+
+    Returns:
+        dict[str, str | bool]: The response containing brand details.
+    """
+
     try:
         brand = await catalog_service.create_brand(
             name=request.name,
@@ -171,13 +279,24 @@ async def create_brand(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
 # Orders endpoints
 @orders_router.post("/", response_model=dict)
 async def create_order(
     request: CreateOrderRequest,
     order_service: OrderService = Depends(get_order_service),
-):
-    """Create a new order."""
+) -> dict[str, str | bool]:
+    """
+    Create a new order.
+
+    Args:
+        request (CreateOrderRequest): The request object containing order details.
+        order_service (OrderService): The order service instance.
+
+    Returns:
+        dict[str, str | bool]: The response containing order details.
+    """
+
     try:
         order = await order_service.create_order(
             customer_id=request.customer_id,
@@ -198,12 +317,23 @@ async def create_order(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
 @orders_router.get("/{order_id}", response_model=dict)
 async def get_order(
     order_id: str,
     order_service: OrderService = Depends(get_order_service),
-):
-    """Get order by ID."""
+) -> dict[str, str | bool]:
+    """
+    Get order by ID.
+
+    Args:
+        order_id (str): The ID of the order.
+        order_service (OrderService): The order service instance.
+
+    Returns:
+        dict[str, str | bool]: The response containing order details.
+    """
+
     try:
         order = await order_service.get_order(order_id)
         return {
@@ -229,13 +359,25 @@ async def get_order(
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
+
 @orders_router.post("/{order_id}/items", response_model=dict)
 async def add_item_to_order(
     order_id: str,
     request: AddOrderItemRequest,
     order_service: OrderService = Depends(get_order_service),
-):
-    """Add item to order."""
+) -> dict[str, str | bool]:
+    """
+    Add item to order.
+
+    Args:
+        order_id (str): The ID of the order.
+        request (AddOrderItemRequest): The request object containing item details.
+        order_service (OrderService): The order service instance.
+
+    Returns:
+        dict[str, str | bool]: The response containing order details.
+    """
+
     try:
         order = await order_service.add_item_to_order(
             order_id=order_id,
@@ -254,12 +396,23 @@ async def add_item_to_order(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
 @orders_router.post("/{order_id}/confirm", response_model=dict)
 async def confirm_order(
     order_id: str,
     order_service: OrderService = Depends(get_order_service),
-):
-    """Confirm order."""
+) -> dict[str, str | bool]:
+    """
+    Confirm order.
+
+    Args:
+        order_id (str): The ID of the order.
+        order_service (OrderService): The order service instance.
+
+    Returns:
+        dict[str, str | bool]: The response containing order details.
+    """
+
     try:
         order = await order_service.confirm_order(order_id)
         return {
@@ -270,12 +423,23 @@ async def confirm_order(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
 @orders_router.post("/{order_id}/cancel", response_model=dict)
 async def cancel_order(
     order_id: str,
     order_service: OrderService = Depends(get_order_service),
-):
-    """Cancel order."""
+) -> dict[str, str | bool]:
+    """
+    Cancel order.
+
+    Args:
+        order_id (str): The ID of the order.
+        order_service (OrderService): The order service instance.
+
+    Returns:
+        dict[str, str | bool]: The response containing order details.
+    """
+
     try:
         order = await order_service.cancel_order(order_id)
         return {

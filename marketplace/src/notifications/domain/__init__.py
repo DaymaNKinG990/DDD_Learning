@@ -1,5 +1,6 @@
 """Notifications domain module."""
 
+# Python imports
 from .entities import Notification, NotificationBatch, NotificationSubscription
 from .events import (
     NotificationCreated,

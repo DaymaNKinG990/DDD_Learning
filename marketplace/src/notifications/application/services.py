@@ -1,8 +1,10 @@
 """Application services for notifications domain."""
 
+# Python imports
 from datetime import UTC, datetime
 from typing import Any, Dict, List, Optional
 
+# Local imports
 from src.notifications.domain.entities import (
     Notification,
     NotificationBatch,
@@ -33,7 +35,11 @@ from src.shared.application.event_handlers import EventHandler
 
 
 class NotificationService:
-    """Service for managing notifications."""
+    """
+    Service for managing notifications.
+    
+    This class provides methods for creating, sending, and managing notifications.
+    """
 
     def __init__(
         self,
@@ -41,7 +47,16 @@ class NotificationService:
         batch_repository: NotificationBatchRepository,
         subscription_repository: NotificationSubscriptionRepository,
         event_handler: Optional[EventHandler] = None,
-    ):
+    ) -> None:
+        """
+        Initialize the notification service.
+        
+        Args:
+            notification_repository (NotificationRepository): The repository for notifications.
+            batch_repository (NotificationBatchRepository): The repository for notification batches.
+            subscription_repository (NotificationSubscriptionRepository): The repository for notification subscriptions.
+            event_handler (EventHandler): The event handler for the notification service.
+        """
         self.notification_repository = notification_repository
         self.batch_repository = batch_repository
         self.subscription_repository = subscription_repository
@@ -56,7 +71,20 @@ class NotificationService:
         priority: NotificationPriority = NotificationPriority.NORMAL,
         scheduled_at: Optional[datetime] = None,
     ) -> Notification:
-        """Send a single notification."""
+        """
+        Send a single notification.
+        
+        Args:
+            recipient (NotificationRecipient): The recipient of the notification.
+            template (NotificationTemplate): The template for the notification.
+            notification_type (NotificationType): The type of the notification.
+            data (Dict[str, Any]): The data for the notification.
+            priority (NotificationPriority): The priority of the notification.
+            scheduled_at (Optional[datetime]): The scheduled time of the notification.
+
+        Returns:
+            Notification: The notification that was sent.
+        """
         notification = Notification(
             id=NotificationId.generate(),
             recipient=recipient,
@@ -85,7 +113,22 @@ class NotificationService:
         priority: NotificationPriority = NotificationPriority.NORMAL,
         scheduled_at: Optional[datetime] = None,
     ) -> NotificationBatch:
-        """Create a notification batch."""
+        """
+        Create a notification batch.
+        
+        Args:
+            name (str): The name of the batch.
+            template (NotificationTemplate): The template for the batch.
+            notification_type (NotificationType): The type of the batch.
+            recipients (List[NotificationRecipient]): The recipients of the batch.
+            data (Dict[str, Any]): The data for the batch.
+            description (Optional[str]): The description of the batch.
+            priority (NotificationPriority): The priority of the batch.
+            scheduled_at (Optional[datetime]): The scheduled time of the batch.
+
+        Returns:
+            NotificationBatch: The created notification batch.
+        """
         batch = NotificationBatch(
             id=NotificationId.generate(),
             name=name,
@@ -102,7 +145,15 @@ class NotificationService:
         return await self.batch_repository.save(batch)
 
     async def start_batch_processing(self, batch_id: str) -> NotificationBatch:
-        """Start processing a notification batch."""
+        """
+        Start processing a notification batch.
+        
+        Args:
+            batch_id (str): The ID of the batch to start processing.
+
+        Returns:
+            NotificationBatch: The batch that was started processing.
+        """
         batch = await self.batch_repository.get_by_id(NotificationId(value=batch_id))
         if not batch:
             raise ValueError(f"Batch with ID {batch_id} not found")
@@ -116,7 +167,15 @@ class NotificationService:
         return saved_batch
 
     async def complete_batch(self, batch_id: str) -> NotificationBatch:
-        """Mark batch as completed."""
+        """
+        Mark a batch as completed.
+        
+        Args:
+            batch_id (str): The ID of the batch to mark as completed.
+
+        Returns:
+            NotificationBatch: The batch that was marked as completed.
+        """
         batch = await self.batch_repository.get_by_id(NotificationId(value=batch_id))
         if not batch:
             raise ValueError(f"Batch with ID {batch_id} not found")
@@ -130,7 +189,15 @@ class NotificationService:
         return saved_batch
 
     async def mark_notification_sent(self, notification_id: str) -> Notification:
-        """Mark notification as sent."""
+        """
+        Mark a notification as sent.
+        
+        Args:
+            notification_id (str): The ID of the notification to mark as sent.
+
+        Returns:
+            Notification: The notification that was marked as sent.
+        """
         notification = await self.notification_repository.get_by_id(
             NotificationId(value=notification_id)
         )
@@ -146,7 +213,15 @@ class NotificationService:
         return saved_notification
 
     async def mark_notification_delivered(self, notification_id: str) -> Notification:
-        """Mark notification as delivered."""
+        """
+        Mark a notification as delivered.
+        
+        Args:
+            notification_id (str): The ID of the notification to mark as delivered.
+
+        Returns:
+            Notification: The notification that was marked as delivered.
+        """
         notification = await self.notification_repository.get_by_id(
             NotificationId(value=notification_id)
         )
@@ -161,10 +236,17 @@ class NotificationService:
         
         return saved_notification
 
-    async def mark_notification_failed(
-        self, notification_id: str, error_message: str
-    ) -> Notification:
-        """Mark notification as failed."""
+    async def mark_notification_failed(self, notification_id: str, error_message: str) -> Notification:
+        """
+        Mark a notification as failed.
+        
+        Args:
+            notification_id (str): The ID of the notification to mark as failed.
+            error_message (str): The error message of the notification.
+
+        Returns:
+            Notification: The notification that was marked as failed.
+        """
         notification = await self.notification_repository.get_by_id(
             NotificationId(value=notification_id)
         )
@@ -180,7 +262,15 @@ class NotificationService:
         return saved_notification
 
     async def retry_notification(self, notification_id: str) -> Optional[Notification]:
-        """Retry sending a failed notification."""
+        """
+        Retry sending a failed notification.
+        
+        Args:
+            notification_id (str): The ID of the notification to retry.
+
+        Returns:
+            Optional[Notification]: The notification that was retried, None if it was not found.
+        """
         notification = await self.notification_repository.get_by_id(
             NotificationId(value=notification_id)
         )
@@ -197,7 +287,17 @@ class NotificationService:
         event_type: str,
         channels: List[NotificationType],
     ) -> NotificationSubscription:
-        """Create a notification subscription."""
+        """
+        Create a notification subscription.
+        
+        Args:
+            user_id (str): The ID of the user.
+            event_type (str): The type of the event.
+            channels (List[NotificationType]): The channels to send the notification on.
+
+        Returns:
+            NotificationSubscription: The created notification subscription.
+        """
         subscription = NotificationSubscription(
             id=NotificationId.generate(),
             user_id=user_id,
@@ -213,7 +313,17 @@ class NotificationService:
         channels: List[NotificationType],
         is_active: bool = True,
     ) -> NotificationSubscription:
-        """Update a notification subscription."""
+        """
+        Update a notification subscription.
+        
+        Args:
+            subscription_id (str): The ID of the subscription to update.
+            channels (List[NotificationType]): The channels to send the notification on.
+            is_active (bool): Whether the subscription is active.
+
+        Returns:
+            NotificationSubscription: The updated notification subscription.
+        """
         subscription = await self.subscription_repository.get_by_id(
             NotificationId(value=subscription_id)
         )
@@ -227,13 +337,31 @@ class NotificationService:
         return await self.subscription_repository.save(subscription)
 
     async def get_user_subscriptions(self, user_id: str) -> List[NotificationSubscription]:
-        """Get all subscriptions for a user."""
+        """
+        Get all subscriptions for a user.
+        
+        Args:
+            user_id (str): The ID of the user.
+
+        Returns:
+            List[NotificationSubscription]: The subscriptions for the user.
+        """
         return await self.subscription_repository.get_by_user_id(user_id)
 
     async def get_pending_notifications(self) -> List[Notification]:
-        """Get all pending notifications."""
+        """
+        Get all pending notifications.
+        
+        Returns:
+            List[Notification]: The pending notifications.
+        """
         return await self.notification_repository.get_by_status(NotificationStatus.PENDING)
 
     async def get_failed_notifications(self) -> List[Notification]:
-        """Get all failed notifications."""
+        """
+        Get all failed notifications.
+        
+        Returns:
+            List[Notification]: The failed notifications.
+        """
         return await self.notification_repository.get_by_status(NotificationStatus.FAILED) 

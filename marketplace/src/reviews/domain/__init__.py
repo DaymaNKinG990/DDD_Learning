@@ -1,5 +1,6 @@
 """Reviews domain module."""
 
+# Local imports
 from .entities import Review, ReviewResponse, ReviewModeration
 from .events import (
     ReviewCreated,

@@ -1,12 +1,26 @@
 """Domain events for orders bounded context."""
 
+# Python imports
 from typing import Any, Dict, Optional
 
+# Local imports
 from src.shared.domain.events import DomainEvent
 
 
 class OrderCreated(DomainEvent):
-    """Event raised when an order is created."""
+    """
+    Event raised when an order is created.
+    
+    This event is raised when an order is created.
+    
+    Attributes:
+        order_id (str): The ID of the order.
+        customer_id (str): The ID of the customer.
+        total (str): The total amount of the order.
+        shipping_address (str): The shipping address of the order.
+        billing_address (str): The billing address of the order.
+        notes (Optional[str]): The notes of the order.
+    """
 
     order_id: str
     customer_id: str
@@ -16,6 +30,12 @@ class OrderCreated(DomainEvent):
     notes: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the event to a dictionary.
+        
+        Returns:
+            Dict[str, Any]: The dictionary representation of the event.
+        """
         return {
             "event_id": str(self.event_id),
             "event_type": self.event_type,
@@ -32,7 +52,19 @@ class OrderCreated(DomainEvent):
 
 
 class OrderItemAdded(DomainEvent):
-    """Event raised when an item is added to an order."""
+    """
+    Event raised when an item is added to an order.
+    
+    This event is raised when an item is added to an order.
+    
+    Attributes:
+        order_id (str): The ID of the order.
+        product_id (str): The ID of the product.
+        product_name (str): The name of the product.
+        quantity (int): The quantity of the product.
+        unit_price (str): The price of the product per unit.
+        total (str): The total price of the product.
+    """
 
     order_id: str
     product_id: str
@@ -42,6 +74,12 @@ class OrderItemAdded(DomainEvent):
     total: str
 
     def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the event to a dictionary.
+        
+        Returns:
+            Dict[str, Any]: The dictionary representation of the event.
+        """
         return {
             "event_id": str(self.event_id),
             "event_type": self.event_type,
@@ -58,13 +96,28 @@ class OrderItemAdded(DomainEvent):
 
 
 class OrderItemRemoved(DomainEvent):
-    """Event raised when an item is removed from an order."""
+    """
+    Event raised when an item is removed from an order.
+    
+    This event is raised when an item is removed from an order.
+    
+    Attributes:
+        order_id (str): The ID of the order.
+        product_id (str): The ID of the product.
+        quantity (int): The quantity of the product.
+    """
 
     order_id: str
     product_id: str
     quantity: int
 
     def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the event to a dictionary.
+        
+        Returns:
+            Dict[str, Any]: The dictionary representation of the event.
+        """
         return {
             "event_id": str(self.event_id),
             "event_type": self.event_type,
@@ -78,13 +131,28 @@ class OrderItemRemoved(DomainEvent):
 
 
 class OrderConfirmed(DomainEvent):
-    """Event raised when an order is confirmed."""
+    """
+    Event raised when an order is confirmed.
+    
+    This event is raised when an order is confirmed.
+    
+    Attributes:
+        order_id (str): The ID of the order.
+        customer_id (str): The ID of the customer.
+        total (str): The total amount of the order.
+    """
 
     order_id: str
     customer_id: str
     total: str
 
     def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the event to a dictionary.
+        
+        Returns:
+            Dict[str, Any]: The dictionary representation of the event.
+        """
         return {
             "event_id": str(self.event_id),
             "event_type": self.event_type,
@@ -98,13 +166,28 @@ class OrderConfirmed(DomainEvent):
 
 
 class OrderShipped(DomainEvent):
-    """Event raised when an order is shipped."""
+    """
+    Event raised when an order is shipped.
+    
+    This event is raised when an order is shipped.
+    
+    Attributes:
+        order_id (str): The ID of the order.
+        tracking_number (Optional[str]): The tracking number of the order.
+        shipping_method (str): The shipping method of the order.
+    """
 
     order_id: str
     tracking_number: Optional[str] = None
     shipping_method: str
 
     def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the event to a dictionary.
+        
+        Returns:
+            Dict[str, Any]: The dictionary representation of the event.
+        """
         return {
             "event_id": str(self.event_id),
             "event_type": self.event_type,
@@ -118,12 +201,26 @@ class OrderShipped(DomainEvent):
 
 
 class OrderDelivered(DomainEvent):
-    """Event raised when an order is delivered."""
+    """
+    Event raised when an order is delivered.
+    
+    This event is raised when an order is delivered.
+    
+    Attributes:
+        order_id (str): The ID of the order.
+        delivered_at (str): The date and time the order was delivered.
+    """
 
     order_id: str
     delivered_at: str
 
     def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the event to a dictionary.
+        
+        Returns:
+            Dict[str, Any]: The dictionary representation of the event.
+        """
         return {
             "event_id": str(self.event_id),
             "event_type": self.event_type,
@@ -136,12 +233,26 @@ class OrderDelivered(DomainEvent):
 
 
 class OrderCancelled(DomainEvent):
-    """Event raised when an order is cancelled."""
+    """
+    Event raised when an order is cancelled.
+    
+    This event is raised when an order is cancelled.
+    
+    Attributes:
+        order_id (str): The ID of the order.
+        reason (Optional[str]): The reason for the cancellation.
+    """
 
     order_id: str
     reason: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the event to a dictionary.
+        
+        Returns:
+            Dict[str, Any]: The dictionary representation of the event.
+        """
         return {
             "event_id": str(self.event_id),
             "event_type": self.event_type,
@@ -154,13 +265,28 @@ class OrderCancelled(DomainEvent):
 
 
 class OrderRefunded(DomainEvent):
-    """Event raised when an order is refunded."""
+    """
+    Event raised when an order is refunded.
+    
+    This event is raised when an order is refunded.
+    
+    Attributes:
+        order_id (str): The ID of the order.
+        refund_amount (str): The amount refunded.
+        reason (str): The reason for the refund.
+    """
 
     order_id: str
     refund_amount: str
     reason: str
 
     def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the event to a dictionary.
+        
+        Returns:
+            Dict[str, Any]: The dictionary representation of the event.
+        """
         return {
             "event_id": str(self.event_id),
             "event_type": self.event_type,
