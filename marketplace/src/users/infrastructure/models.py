@@ -1,13 +1,26 @@
 """SQLAlchemy models for users domain."""
 
+# Python imports
 from sqlalchemy import Boolean, Column, DateTime, String, Text
 from sqlalchemy.orm import relationship
 
+# Local imports
 from src.shared.infrastructure.models import Base, TimestampMixin
 
 
 class UserModel(Base, TimestampMixin):
-    """SQLAlchemy model for User entity."""
+    """
+    SQLAlchemy model for User entity.
+    
+    Attributes:
+        id: The ID of the user.
+        email: The email of the user.
+        password_hash: The hash of the user's password.
+        first_name: The first name of the user.
+        last_name: The last name of the user.
+        phone_number: The phone number of the user.
+        is_active: Whether the user is active.
+    """
     
     __tablename__ = "users"
     
@@ -25,7 +38,15 @@ class UserModel(Base, TimestampMixin):
 
 
 class CustomerModel(Base, TimestampMixin):
-    """SQLAlchemy model for Customer entity."""
+    """
+    SQLAlchemy model for Customer entity.
+    
+    Attributes:
+        id: The ID of the customer.
+        user_id: The ID of the user.
+        shipping_address: The shipping address of the customer.
+        billing_address: The billing address of the customer.
+    """
     
     __tablename__ = "customers"
     
@@ -39,7 +60,17 @@ class CustomerModel(Base, TimestampMixin):
 
 
 class SellerModel(Base, TimestampMixin):
-    """SQLAlchemy model for Seller entity."""
+    """
+    SQLAlchemy model for Seller entity.
+    
+    Attributes:
+        id: The ID of the seller.
+        user_id: The ID of the user.
+        company_name: The name of the company.
+        company_description: The description of the company.
+        website: The website of the company.
+        is_verified: Whether the seller is verified.
+    """
     
     __tablename__ = "sellers"
     

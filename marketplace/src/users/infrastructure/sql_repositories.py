@@ -1,10 +1,11 @@
 """SQLAlchemy repository implementations for users domain."""
 
+# Python imports
 from typing import List, Optional
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+# Local imports
 from src.shared.infrastructure.sql_repositories import SQLRepository
 from src.users.domain.entities import Customer, Seller, User
 from src.users.domain.repositories import CustomerRepository, SellerRepository, UserRepository
@@ -13,13 +14,27 @@ from src.users.infrastructure.models import CustomerModel, SellerModel, UserMode
 
 
 class SQLUserRepository(SQLRepository[UserModel], UserRepository):
-    """SQLAlchemy implementation of UserRepository."""
+    """
+    SQLAlchemy implementation of UserRepository.
     
-    def __init__(self, session: AsyncSession):
+    Attributes:
+        session: The SQLAlchemy session.
+    """
+    
+    def __init__(self, session: AsyncSession) -> None:
+        """Initialize the SQLAlchemy user repository."""
         super().__init__(session, UserModel)
     
     async def save(self, user: User) -> User:
-        """Save user to database."""
+        """
+        Save user to database.
+        
+        Args:
+            user: The user to save.
+
+        Returns:
+            User: The saved user.
+        """
         # Convert domain entity to SQLAlchemy model
         user_model = UserModel(
             id=user.id.value,
@@ -45,7 +60,15 @@ class SQLUserRepository(SQLRepository[UserModel], UserRepository):
         )
     
     async def get_by_id(self, user_id: UserId) -> Optional[User]:
-        """Get user by ID."""
+        """
+        Get user by ID.
+        
+        Args:
+            user_id: The ID of the user.
+
+        Returns:
+            Optional[User]: The user.
+        """
         user_model = await super().get_by_id(user_id.value)
         if not user_model:
             return None
@@ -61,7 +84,15 @@ class SQLUserRepository(SQLRepository[UserModel], UserRepository):
         )
     
     async def get_by_email(self, email: Email) -> Optional[User]:
-        """Get user by email."""
+        """
+        Get user by email.
+        
+        Args:
+            email: The email of the user.
+
+        Returns:
+            Optional[User]: The user.
+        """
         stmt = select(UserModel).where(UserModel.email == email.value)
         result = await self.session.execute(stmt)
         user_model = result.scalar_one_or_none()
@@ -80,7 +111,12 @@ class SQLUserRepository(SQLRepository[UserModel], UserRepository):
         )
     
     async def get_all(self) -> List[User]:
-        """Get all users."""
+        """
+        Get all users.
+        
+        Returns:
+            List[User]: The users.
+        """
         user_models = await super().get_all()
         
         return [
@@ -97,18 +133,45 @@ class SQLUserRepository(SQLRepository[UserModel], UserRepository):
         ]
     
     async def delete(self, user_id: UserId) -> bool:
-        """Delete user by ID."""
+        """
+        Delete user by ID.
+        
+        Args:
+            user_id: The ID of the user.
+
+        Returns:
+            bool: True if the user was deleted, False otherwise.
+        """
         return await super().delete(user_id.value)
 
 
 class SQLCustomerRepository(SQLRepository[CustomerModel], CustomerRepository):
-    """SQLAlchemy implementation of CustomerRepository."""
+    """
+    SQLAlchemy implementation of CustomerRepository.
     
-    def __init__(self, session: AsyncSession):
+    Attributes:
+        session: The SQLAlchemy session.
+    """
+    
+    def __init__(self, session: AsyncSession) -> None:
+        """
+        Initialize the SQLAlchemy customer repository.
+        
+        Args:
+            session: The SQLAlchemy session.
+        """
         super().__init__(session, CustomerModel)
     
     async def save(self, customer: Customer) -> Customer:
-        """Save customer to database."""
+        """
+        Save customer to database.
+        
+        Args:
+            customer: The customer to save.
+
+        Returns:
+            Customer: The saved customer.
+        """
         customer_model = CustomerModel(
             id=customer.id.value,
             user_id=customer.user_id.value,
@@ -126,7 +189,15 @@ class SQLCustomerRepository(SQLRepository[CustomerModel], CustomerRepository):
         )
     
     async def get_by_id(self, customer_id: CustomerId) -> Optional[Customer]:
-        """Get customer by ID."""
+        """
+        Get customer by ID.
+        
+        Args:
+            customer_id: The ID of the customer.
+
+        Returns:
+            Optional[Customer]: The customer.
+        """
         customer_model = await super().get_by_id(customer_id.value)
         if not customer_model:
             return None
@@ -139,7 +210,15 @@ class SQLCustomerRepository(SQLRepository[CustomerModel], CustomerRepository):
         )
     
     async def get_by_user_id(self, user_id: UserId) -> Optional[Customer]:
-        """Get customer by user ID."""
+        """
+        Get customer by user ID.
+        
+        Args:
+            user_id: The ID of the user.
+
+        Returns:
+            Optional[Customer]: The customer.
+        """
         stmt = select(CustomerModel).where(CustomerModel.user_id == user_id.value)
         result = await self.session.execute(stmt)
         customer_model = result.scalar_one_or_none()
@@ -155,7 +234,12 @@ class SQLCustomerRepository(SQLRepository[CustomerModel], CustomerRepository):
         )
     
     async def get_all(self) -> List[Customer]:
-        """Get all customers."""
+        """
+        Get all customers.
+        
+        Returns:
+            List[Customer]: The customers.
+        """
         customer_models = await super().get_all()
         
         return [
@@ -169,18 +253,45 @@ class SQLCustomerRepository(SQLRepository[CustomerModel], CustomerRepository):
         ]
     
     async def delete(self, customer_id: CustomerId) -> bool:
-        """Delete customer by ID."""
+        """
+        Delete customer by ID.
+        
+        Args:
+            customer_id: The ID of the customer.
+
+        Returns:
+            bool: True if the customer was deleted, False otherwise.
+        """
         return await super().delete(customer_id.value)
 
 
 class SQLSellerRepository(SQLRepository[SellerModel], SellerRepository):
-    """SQLAlchemy implementation of SellerRepository."""
+    """
+    SQLAlchemy implementation of SellerRepository.
     
-    def __init__(self, session: AsyncSession):
+    Attributes:
+        session: The SQLAlchemy session.
+    """
+    
+    def __init__(self, session: AsyncSession) -> None:
+        """
+        Initialize the SQLAlchemy seller repository.
+        
+        Args:
+            session: The SQLAlchemy session.
+        """
         super().__init__(session, SellerModel)
     
     async def save(self, seller: Seller) -> Seller:
-        """Save seller to database."""
+        """
+        Save seller to database.
+        
+        Args:
+            seller: The seller to save.
+
+        Returns:
+            Seller: The saved seller.
+        """
         seller_model = SellerModel(
             id=seller.id.value,
             user_id=seller.user_id.value,
@@ -202,7 +313,15 @@ class SQLSellerRepository(SQLRepository[SellerModel], SellerRepository):
         )
     
     async def get_by_id(self, seller_id: SellerId) -> Optional[Seller]:
-        """Get seller by ID."""
+        """
+        Get seller by ID.
+        
+        Args:
+            seller_id: The ID of the seller.
+
+        Returns:
+            Optional[Seller]: The seller.
+        """
         seller_model = await super().get_by_id(seller_id.value)
         if not seller_model:
             return None
@@ -217,7 +336,15 @@ class SQLSellerRepository(SQLRepository[SellerModel], SellerRepository):
         )
     
     async def get_by_user_id(self, user_id: UserId) -> Optional[Seller]:
-        """Get seller by user ID."""
+        """
+        Get seller by user ID.
+        
+        Args:
+            user_id: The ID of the user.
+
+        Returns:
+            Optional[Seller]: The seller.
+        """
         stmt = select(SellerModel).where(SellerModel.user_id == user_id.value)
         result = await self.session.execute(stmt)
         seller_model = result.scalar_one_or_none()
@@ -235,7 +362,12 @@ class SQLSellerRepository(SQLRepository[SellerModel], SellerRepository):
         )
     
     async def get_all(self) -> List[Seller]:
-        """Get all sellers."""
+        """
+        Get all sellers.
+        
+        Returns:
+            List[Seller]: The sellers.
+        """
         seller_models = await super().get_all()
         
         return [
@@ -251,7 +383,12 @@ class SQLSellerRepository(SQLRepository[SellerModel], SellerRepository):
         ]
     
     async def get_verified(self) -> List[Seller]:
-        """Get all verified sellers."""
+        """
+        Get all verified sellers.
+        
+        Returns:
+            List[Seller]: The verified sellers.
+        """
         stmt = select(SellerModel).where(SellerModel.is_verified == True)
         result = await self.session.execute(stmt)
         seller_models = result.scalars().all()
@@ -269,5 +406,13 @@ class SQLSellerRepository(SQLRepository[SellerModel], SellerRepository):
         ]
     
     async def delete(self, seller_id: SellerId) -> bool:
-        """Delete seller by ID."""
+        """
+        Delete seller by ID.
+        
+        Args:
+            seller_id: The ID of the seller.
+
+        Returns:
+            bool: True if the seller was deleted, False otherwise.
+        """
         return await super().delete(seller_id.value) 

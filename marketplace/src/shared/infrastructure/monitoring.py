@@ -1,9 +1,9 @@
 """Monitoring and metrics for marketplace services."""
 
+# Python imports
 import time
-from typing import Callable, Any
+from typing import Any, Callable
 from functools import wraps
-
 from prometheus_client import (
     Counter,
     Histogram,
@@ -11,10 +11,9 @@ from prometheus_client import (
     Summary,
     generate_latest,
     CONTENT_TYPE_LATEST,
-    CollectorRegistry,
-    multiprocess,
+    CollectorRegistry
 )
-from fastapi import Request, Response
+from fastapi import Response
 from fastapi.responses import PlainTextResponse
 
 
@@ -123,9 +122,27 @@ health_check_status = Gauge(
 
 
 def track_request_metrics(func: Callable) -> Callable:
-    """Decorator to track request metrics."""
+    """
+    Decorator to track request metrics.
+
+    Args:
+        func: The function to track.
+
+    Returns:
+        Callable: The decorated function.
+    """
     @wraps(func)
-    async def wrapper(*args, **kwargs):
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        """
+        Wrapper to track request metrics.
+
+        Args:
+            *args: The arguments.
+            **kwargs: The keyword arguments.
+
+        Returns:
+            Any: The result of the function.
+        """
         start_time = time.time()
         
         try:
@@ -146,11 +163,36 @@ def track_request_metrics(func: Callable) -> Callable:
     return wrapper
 
 
-def track_business_metrics(metric_name: str, labels: dict = None):
-    """Decorator to track business metrics."""
+def track_business_metrics(metric_name: str, labels: dict = None) -> Callable:
+    """
+    Decorator to track business metrics.
+
+    Args:
+        metric_name: The name of the metric.
+        labels: The labels for the metric.
+
+    Returns:
+        Callable: The decorated function.
+    """
     def decorator(func: Callable) -> Callable:
+        """
+        Decorator to track business metrics.
+
+        Args:
+            func: The function to track.
+
+        Returns:
+            Callable: The decorated function.
+        """
         @wraps(func)
-        async def wrapper(*args, **kwargs):
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+            """
+            Wrapper to track business metrics.
+
+            Args:
+                *args: The arguments.
+                **kwargs: The keyword arguments.
+            """
             try:
                 result = await func(*args, **kwargs)
                 
@@ -175,11 +217,36 @@ def track_business_metrics(metric_name: str, labels: dict = None):
     return decorator
 
 
-def track_performance(service: str, operation: str):
-    """Decorator to track performance metrics."""
+def track_performance(service: str, operation: str) -> Callable:
+    """
+    Decorator to track performance metrics.
+
+    Args:
+        service: The name of the service.
+        operation: The name of the operation.
+
+    Returns:
+        Callable: The decorated function.
+    """
     def decorator(func: Callable) -> Callable:
+        """
+        Decorator to track performance metrics.
+
+        Args:
+            func: The function to track.
+
+        Returns:
+            Callable: The decorated function.
+        """
         @wraps(func)
-        async def wrapper(*args, **kwargs):
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+            """
+            Wrapper to track performance metrics.
+
+            Args:
+                *args: The arguments.
+                **kwargs: The keyword arguments.
+            """
             start_time = time.time()
             try:
                 result = await func(*args, **kwargs)
@@ -193,40 +260,85 @@ def track_performance(service: str, operation: str):
 
 
 async def metrics_endpoint() -> Response:
-    """Prometheus metrics endpoint."""
+    """
+    Prometheus metrics endpoint.
+
+    Returns:
+        Response: The response.
+    """
     return PlainTextResponse(
         generate_latest(registry),
         media_type=CONTENT_TYPE_LATEST
     )
 
 
-def update_health_status(service: str, is_healthy: bool):
-    """Update health check status."""
+def update_health_status(service: str, is_healthy: bool) -> None:
+    """
+    Update health check status.
+
+    Args:
+        service: The name of the service.
+        is_healthy: The health status.
+    """
     health_check_status.labels(service=service).set(1 if is_healthy else 0)
 
 
-def update_database_connections(count: int):
-    """Update database connections metric."""
+def update_database_connections(count: int) -> None:
+    """
+    Update database connections metric.
+
+    Args:
+        count: The number of database connections.
+    """
     database_connections_active.set(count)
 
 
-def update_redis_connections(count: int):
-    """Update Redis connections metric."""
+def update_redis_connections(count: int) -> None:
+    """
+    Update Redis connections metric.
+
+    Args:
+        count: The number of Redis connections.
+    """
     redis_connections_active.set(count)
 
 
-def update_cache_hit_ratio(ratio: float):
-    """Update cache hit ratio metric."""
+def update_cache_hit_ratio(ratio: float) -> None:
+    """
+    Update cache hit ratio metric.
+
+    Args:
+        ratio: The cache hit ratio.
+    """
     cache_hit_ratio.set(ratio)
 
 
 class MetricsMiddleware:
-    """FastAPI middleware for collecting metrics."""
+    """
+    FastAPI middleware for collecting metrics.
+
+    Attributes:
+        app: The FastAPI app.
+    """
     
-    def __init__(self, app):
+    def __init__(self, app) -> None:
+        """
+        Initialize the metrics middleware.
+
+        Args:
+            app: The FastAPI app.
+        """
         self.app = app
     
-    async def __call__(self, scope, receive, send):
+    async def __call__(self, scope: dict, receive: Callable, send: Callable) -> None:
+        """
+        Call the middleware.
+
+        Args:
+            scope: The scope.
+            receive: The receive function.
+            send: The send function.
+        """
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
@@ -238,7 +350,13 @@ class MetricsMiddleware:
         # Track request start
         http_requests_total.labels(method=method, endpoint=path, status="started").inc()
         
-        async def send_wrapper(message):
+        async def send_wrapper(message: dict) -> None:
+            """
+            Wrapper to send the response.
+
+            Args:
+                message: The message.
+            """
             if message["type"] == "http.response.start":
                 status = message["status"]
                 http_requests_total.labels(method=method, endpoint=path, status=status).inc()

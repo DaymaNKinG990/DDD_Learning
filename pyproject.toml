@@ -21,6 +21,10 @@ dependencies = [
     "fastapi>=0.116.1",
     "passlib>=1.7.4",
     "python-jose[cryptography]>=3.5.0",
+    "redis>=6.2.0",
+    "pydantic-settings>=2.10.1",
+    "prometheus-client>=0.22.1",
+    "httpx>=0.28.1",
 ]
 
 [tool.ruff]

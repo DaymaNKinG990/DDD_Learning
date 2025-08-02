@@ -1,14 +1,18 @@
 """Error handling and exception handlers for FastAPI."""
 
+# Python imports
+import asyncio
+import time
 import traceback
-from typing import Any, Dict, Optional
-
+from types import TracebackType
+from typing import Any, Callable, Dict, Optional, Type
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+# Local imports
 from src.shared.domain.exceptions import (
     BusinessRuleViolationError,
     EntityNotFoundError,
@@ -27,52 +31,118 @@ from src.shared.infrastructure.validation import (
 
 
 class ErrorHandler:
-    """Centralized error handler for the application."""
+    """
+    Centralized error handler for the application.
     
-    def __init__(self, app: FastAPI):
+    Attributes:
+        app: The FastAPI application.
+        logger: The logger for the error handler.
+    """
+    
+    def __init__(self, app: FastAPI) -> None:
+        """Initialize the error handler."""
         self.app = app
         self.logger = get_logger("marketplace.error_handler")
         self._register_handlers()
     
-    def _register_handlers(self):
+    def _register_handlers(self) -> None:
         """Register all error handlers."""
         
         @self.app.exception_handler(ValidationError)
-        async def validation_error_handler(request: Request, exc: ValidationError):
-            """Handle Pydantic validation errors."""
+        async def validation_error_handler(request: Request, exc: ValidationError) -> JSONResponse:  # noqa: F841
+            """
+            Handle Pydantic validation errors.
+
+            Args:
+                request: The request object.
+                exc: The validation error.
+
+            Returns:
+                JSONResponse: The response object.
+            """
             return await self._handle_validation_error(request, exc)
         
         @self.app.exception_handler(RequestValidationError)
-        async def request_validation_error_handler(request: Request, exc: RequestValidationError):
-            """Handle FastAPI request validation errors."""
+        async def request_validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:  # noqa: F841
+            """
+            Handle FastAPI request validation errors.
+
+            Args:
+                request: The request object.
+                exc: The request validation error.
+
+            Returns:
+                JSONResponse: The response object.
+            """
             return await self._handle_validation_error(request, exc)
         
         @self.app.exception_handler(BusinessRuleViolationError)
-        async def business_rule_violation_handler(request: Request, exc: BusinessRuleViolationError):
-            """Handle business rule violations."""
+        async def business_rule_violation_handler(request: Request, exc: BusinessRuleViolationError) -> JSONResponse:  # noqa: F841
+            """
+            Handle business rule violations.
+
+            Args:
+                request: The request object.
+                exc: The business rule violation error.
+
+            Returns:
+                JSONResponse: The response object.
+            """
             return await self._handle_business_rule_violation(request, exc)
         
         @self.app.exception_handler(EntityNotFoundError)
-        async def entity_not_found_handler(request: Request, exc: EntityNotFoundError):
-            """Handle entity not found errors."""
+        async def entity_not_found_handler(request: Request, exc: EntityNotFoundError) -> JSONResponse:  # noqa: F841
+            """
+            Handle entity not found errors.
+
+            Args:
+                request: The request object.
+                exc: The entity not found error.
+
+            Returns:
+                JSONResponse: The response object.
+            """
             return await self._handle_entity_not_found(request, exc)
         
         @self.app.exception_handler(StarletteHTTPException)
-        async def http_exception_handler(request: Request, exc: StarletteHTTPException):
-            """Handle HTTP exceptions."""
+        async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:  # noqa: F841
+            """
+            Handle HTTP exceptions.
+
+            Args:
+                request: The request object.
+                exc: The HTTP exception.
+
+            Returns:
+                JSONResponse: The response object.
+            """
             return await self._handle_http_exception(request, exc)
         
         @self.app.exception_handler(Exception)
-        async def general_exception_handler(request: Request, exc: Exception):
-            """Handle all other exceptions."""
+        async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:  # noqa: F841
+            """
+            Handle all other exceptions.
+
+            Args:
+                request: The request object.
+                exc: The exception.
+
+            Returns:
+                JSONResponse: The response object.
+            """
             return await self._handle_general_exception(request, exc)
     
-    async def _handle_validation_error(
-        self, 
-        request: Request, 
-        exc: ValidationError
-    ) -> JSONResponse:
-        """Handle validation errors."""
+    async def _handle_validation_error(self, request: Request, exc: ValidationError) -> JSONResponse:
+        """
+        Handle validation errors.
+
+        Args:
+            request: The request object.
+            exc: The validation error.
+
+        Returns:
+            JSONResponse: The response object.
+        """
         # Log the error
         self.logger.error(
             f"Validation error: {exc}",
@@ -95,12 +165,17 @@ class ErrorHandler:
             content=error_response.model_dump()
         )
     
-    async def _handle_business_rule_violation(
-        self, 
-        request: Request, 
-        exc: BusinessRuleViolationError
-    ) -> JSONResponse:
-        """Handle business rule violations."""
+    async def _handle_business_rule_violation(self, request: Request, exc: BusinessRuleViolationError) -> JSONResponse:
+        """
+        Handle business rule violations.
+
+        Args:
+            request: The request object.
+            exc: The business rule violation error.
+
+        Returns:
+            JSONResponse: The response object.
+        """
         # Log the error
         self.logger.warning(
             f"Business rule violation: {exc}",
@@ -125,12 +200,17 @@ class ErrorHandler:
             content=error_response.model_dump()
         )
     
-    async def _handle_entity_not_found(
-        self, 
-        request: Request, 
-        exc: EntityNotFoundError
-    ) -> JSONResponse:
-        """Handle entity not found errors."""
+    async def _handle_entity_not_found(self, request: Request, exc: EntityNotFoundError) -> JSONResponse:
+        """
+        Handle entity not found errors.
+
+        Args:
+            request: The request object.
+            exc: The entity not found error.
+
+        Returns:
+            JSONResponse: The response object.
+        """
         # Log the error
         self.logger.info(
             f"Entity not found: {exc}",
@@ -155,12 +235,17 @@ class ErrorHandler:
             content=error_response.model_dump()
         )
     
-    async def _handle_http_exception(
-        self, 
-        request: Request, 
-        exc: StarletteHTTPException
-    ) -> JSONResponse:
-        """Handle HTTP exceptions."""
+    async def _handle_http_exception(self, request: Request, exc: StarletteHTTPException) -> JSONResponse:
+        """
+        Handle HTTP exceptions.
+
+        Args:
+            request: The request object.
+            exc: The HTTP exception.
+
+        Returns:
+            JSONResponse: The response object.
+        """
         # Log the error
         self.logger.warning(
             f"HTTP exception: {exc.status_code} - {exc.detail}",
@@ -199,12 +284,17 @@ class ErrorHandler:
             content=error_response.model_dump() if hasattr(error_response, 'model_dump') else error_response
         )
     
-    async def _handle_general_exception(
-        self, 
-        request: Request, 
-        exc: Exception
-    ) -> JSONResponse:
-        """Handle general exceptions."""
+    async def _handle_general_exception(self, request: Request, exc: Exception) -> JSONResponse:
+        """
+        Handle general exceptions.
+
+        Args:
+            request: The request object.
+            exc: The exception.
+
+        Returns:
+            JSONResponse: The response object.
+        """
         # Get request ID if available
         request_id = getattr(request.state, 'request_id', None)
         
@@ -233,14 +323,33 @@ class ErrorHandler:
 
 
 class ErrorMiddleware:
-    """Middleware for error handling and logging."""
+    """
+    Middleware for error handling and logging.
     
-    def __init__(self, app: FastAPI):
+    Attributes:
+        app: The FastAPI application.
+        logger: The logger for the error middleware.
+    """
+    
+    def __init__(self, app: FastAPI) -> None:
+        """
+        Initialize the error middleware.
+
+        Args:
+            app: The FastAPI application.
+        """
         self.app = app
         self.logger = get_logger("marketplace.error_middleware")
     
-    async def __call__(self, scope, receive, send):
-        """Process request and handle errors."""
+    async def __call__(self, scope: dict, receive: Any, send: Any) -> None:
+        """
+        Process request and handle errors.
+
+        Args:
+            scope: The scope of the request.
+            receive: The receive function.
+            send: The send function.
+        """
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
@@ -265,27 +374,68 @@ class ErrorMiddleware:
 
 # Custom exception classes
 class AuthenticationError(Exception):
-    """Authentication error."""
+    """
+    Authentication error.
     
-    def __init__(self, message: str, code: Optional[str] = None):
+    Attributes:
+        message: The error message.
+        code: The error code.
+    """
+    
+    def __init__(self, message: str, code: Optional[str] = None) -> None:
+        """
+        Initialize the authentication error.
+
+        Args:
+            message: The error message.
+            code: The error code.
+        """
         self.message = message
         self.code = code
         super().__init__(self.message)
 
 
 class AuthorizationError(Exception):
-    """Authorization error."""
+    """
+    Authorization error.
     
-    def __init__(self, message: str, required_permissions: Optional[list] = None):
+    Attributes:
+        message: The error message.
+        required_permissions: The required permissions.
+    """
+    
+    def __init__(self, message: str, required_permissions: Optional[list] = None) -> None:
+        """
+        Initialize the authorization error.
+
+        Args:
+            message: The error message.
+            required_permissions: The required permissions.
+        """
         self.message = message
         self.required_permissions = required_permissions or []
         super().__init__(self.message)
 
 
 class RateLimitError(Exception):
-    """Rate limit error."""
+    """
+    Rate limit error.
     
-    def __init__(self, message: str, retry_after: Optional[int] = None, limit: Optional[int] = None):
+    Attributes:
+        message: The error message.
+        retry_after: The time to wait before retrying.
+        limit: The rate limit.
+    """
+
+    def __init__(self, message: str, retry_after: Optional[int] = None, limit: Optional[int] = None) -> None:
+        """
+        Initialize the rate limit error.
+
+        Args:
+            message: The error message.
+            retry_after: The time to wait before retrying.
+            limit: The rate limit.
+        """
         self.message = message
         self.retry_after = retry_after
         self.limit = limit
@@ -293,9 +443,24 @@ class RateLimitError(Exception):
 
 
 class DatabaseError(Exception):
-    """Database error."""
+    """
+    Database error.
     
-    def __init__(self, message: str, operation: Optional[str] = None, table: Optional[str] = None):
+    Attributes:
+        message: The error message.
+        operation: The operation that caused the error.
+        table: The table that caused the error.
+    """
+
+    def __init__(self, message: str, operation: Optional[str] = None, table: Optional[str] = None) -> None:
+        """
+        Initialize the database error.
+
+        Args:
+            message: The error message.
+            operation: The operation that caused the error.
+            table: The table that caused the error.
+        """
         self.message = message
         self.operation = operation
         self.table = table
@@ -303,9 +468,24 @@ class DatabaseError(Exception):
 
 
 class CacheError(Exception):
-    """Cache error."""
+    """
+    Cache error.
     
-    def __init__(self, message: str, operation: Optional[str] = None, key: Optional[str] = None):
+    Attributes:
+        message: The error message.
+        operation: The operation that caused the error.
+        key: The key that caused the error.
+    """
+
+    def __init__(self, message: str, operation: Optional[str] = None, key: Optional[str] = None) -> None:
+        """
+        Initialize the cache error.
+
+        Args:
+            message: The error message.
+            operation: The operation that caused the error.
+            key: The key that caused the error.
+        """
         self.message = message
         self.operation = operation
         self.key = key
@@ -313,9 +493,24 @@ class CacheError(Exception):
 
 
 class ExternalServiceError(Exception):
-    """External service error."""
+    """
+    External service error.
     
-    def __init__(self, message: str, service: Optional[str] = None, status_code: Optional[int] = None):
+    Attributes:
+        message: The error message.
+        service: The service that caused the error.
+        status_code: The status code of the error.
+    """
+
+    def __init__(self, message: str, service: Optional[str] = None, status_code: Optional[int] = None) -> None:
+        """
+        Initialize the external service error.
+
+        Args:
+            message: The error message.
+            service: The service that caused the error.
+            status_code: The status code of the error.
+        """
         self.message = message
         self.service = service
         self.status_code = status_code
@@ -324,16 +519,45 @@ class ExternalServiceError(Exception):
 
 # Error context manager
 class ErrorContext:
-    """Context manager for error handling."""
+    """
+    Context manager for error handling.
     
-    def __init__(self, logger_name: str = "marketplace.error_context"):
+    Attributes:
+        logger: The logger for the error context.
+        context: The context of the error.
+    """
+    
+    def __init__(self, logger_name: str = "marketplace.error_context") -> None:
+        """
+        Initialize the error context.
+
+        Args:
+            logger_name: The name of the logger.
+        """
         self.logger = get_logger(logger_name)
         self.context: Dict[str, Any] = {}
     
-    def __enter__(self):
+    def __enter__(self) -> "ErrorContext":
+        """
+        Enter the error context.
+
+        Returns:
+            ErrorContext: The error context.
+        """
         return self
     
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]) -> None:
+        """
+        Exit the error context.
+
+        Args:
+            exc_type: The type of the exception.
+            exc_val: The value of the exception.
+            exc_tb: The traceback of the exception.
+
+        Returns:
+            bool: False to re-raise the exception.
+        """
         if exc_type is not None:
             self.logger.error(
                 f"Error in context: {exc_val}",
@@ -346,19 +570,55 @@ class ErrorContext:
             )
         return False  # Re-raise the exception
     
-    def add_context(self, **kwargs):
-        """Add context information."""
+    def add_context(self, **kwargs: Any) -> "ErrorContext":
+        """
+        Add context information.
+
+        Args:
+            **kwargs: The context information.
+
+        Returns:
+            ErrorContext: The error context.
+        """
         self.context.update(kwargs)
         return self
 
 
 # Error decorators
-def handle_errors(logger_name: str = "marketplace.error_handler"):
-    """Decorator to handle errors in functions."""
-    def decorator(func):
+def handle_errors(logger_name: str = "marketplace.error_handler") -> Callable:
+    """
+    Decorator to handle errors in functions.
+
+    Args:
+        logger_name: The name of the logger.
+
+    Returns:
+        Callable: The decorator.
+    """
+
+    def decorator(func: Callable) -> Callable:
+        """
+        Decorator to handle errors in functions.
+
+        Args:
+            func: The function to handle errors.
+
+        Returns:
+            Callable: The decorated function.
+        """
         logger = get_logger(logger_name)
         
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            """
+            Async wrapper to handle errors.
+
+            Args:
+                *args: The arguments.
+                **kwargs: The keyword arguments.
+
+            Returns:
+                Any: The result of the function.
+            """
             try:
                 return await func(*args, **kwargs)
             except Exception as e:
@@ -373,7 +633,17 @@ def handle_errors(logger_name: str = "marketplace.error_handler"):
                 )
                 raise
         
-        def sync_wrapper(*args, **kwargs):
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+            """
+            Sync wrapper to handle errors.
+
+            Args:
+                *args: The arguments.
+                **kwargs: The keyword arguments.
+
+            Returns:
+                Any: The result of the function.
+            """
             try:
                 return func(*args, **kwargs)
             except Exception as e:
@@ -388,7 +658,6 @@ def handle_errors(logger_name: str = "marketplace.error_handler"):
                 )
                 raise
         
-        import asyncio
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
         else:
@@ -397,13 +666,40 @@ def handle_errors(logger_name: str = "marketplace.error_handler"):
     return decorator
 
 
-def retry_on_error(max_retries: int = 3, delay: float = 1.0, backoff: float = 2.0):
-    """Decorator to retry functions on error."""
-    import asyncio
-    import time
+def retry_on_error(max_retries: int = 3, delay: float = 1.0, backoff: float = 2.0) -> Callable:
+    """
+    Decorator to retry functions on error.
+
+    Args:
+        max_retries: The maximum number of retries.
+        delay: The delay between retries.
+        backoff: The backoff factor.
+
+    Returns:
+        Callable: The decorator.
+    """
     
-    def decorator(func):
-        async def async_wrapper(*args, **kwargs):
+    def decorator(func: Callable) -> Callable:
+        """
+        Decorator to retry functions on error.
+
+        Args:
+            func: The function to retry.
+
+        Returns:
+            Callable: The decorated function.
+        """
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            """
+            Async wrapper to retry functions on error.
+
+            Args:
+                *args: The arguments.
+                **kwargs: The keyword arguments.
+
+            Returns:
+                Any: The result of the function.
+            """
             last_exception = None
             
             for attempt in range(max_retries):
@@ -416,7 +712,17 @@ def retry_on_error(max_retries: int = 3, delay: float = 1.0, backoff: float = 2.
             
             raise last_exception
         
-        def sync_wrapper(*args, **kwargs):
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+            """
+            Sync wrapper to retry functions on error.
+
+            Args:
+                *args: The arguments.
+                **kwargs: The keyword arguments.
+
+            Returns:
+                Any: The result of the function.
+            """
             last_exception = None
             
             for attempt in range(max_retries):

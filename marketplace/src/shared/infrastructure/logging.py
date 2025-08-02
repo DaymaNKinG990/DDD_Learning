@@ -1,20 +1,27 @@
 """Logging configuration and utilities."""
 
+# Python imports
 import asyncio
 import logging
 import logging.config
-import sys
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
-
+from typing import Any, Callable, Dict, Optional
 from pydantic import BaseModel
 
+# Local imports
 from src.shared.infrastructure.config import settings
 
 
 class LogConfig(BaseModel):
-    """Logging configuration model."""
+    """
+    Logging configuration model.
+
+    Attributes:
+        LOGGER_NAME: The name of the logger.
+        LOG_FORMAT: The format of the log messages.
+        LOG_LEVEL: The level of the log messages.
+    """
     
     LOGGER_NAME: str = "marketplace"
     LOG_FORMAT: str = "%(levelprefix)s | %(asctime)s | %(message)s"
@@ -109,54 +116,132 @@ class LogConfig(BaseModel):
 
 
 class StructuredLogger:
-    """Structured logger with context support."""
+    """
+    Structured logger with context support.
+
+    Attributes:
+        logger: The logger instance.
+        context: The context of the logger.
+    """
     
-    def __init__(self, name: str):
+    def __init__(self, name: str) -> None:
+        """
+        Initialize the structured logger.
+
+        Args:
+            name: The name of the logger.
+        """
         self.logger = logging.getLogger(name)
         self.context: Dict[str, Any] = {}
     
     def bind(self, **kwargs) -> "StructuredLogger":
-        """Bind context to logger."""
+        """
+        Bind context to logger.
+
+        Args:
+            **kwargs: The context to bind.
+
+        Returns:
+            StructuredLogger: The new logger instance.
+        """
         new_logger = StructuredLogger(self.logger.name)
         new_logger.context = {**self.context, **kwargs}
         return new_logger
     
     def _format_message(self, message: str) -> str:
-        """Format message with context."""
+        """
+        Format message with context.
+
+        Args:
+            message: The message to format.
+
+        Returns:
+            str: The formatted message.
+        """
         if self.context:
             context_str = " | ".join(f"{k}={v}" for k, v in self.context.items())
             return f"{message} | {context_str}"
         return message
     
-    def debug(self, message: str, **kwargs):
-        """Log debug message."""
+    def debug(self, message: str, **kwargs) -> None:
+        """
+        Log debug message.
+
+        Args:
+            message: The message to log.
+            **kwargs: The keyword arguments.
+        """
         self.logger.debug(self._format_message(message), extra=kwargs)
     
-    def info(self, message: str, **kwargs):
-        """Log info message."""
+    def info(self, message: str, **kwargs) -> None:
+        """
+        Log info message.
+
+        Args:
+            message: The message to log.
+            **kwargs: The keyword arguments.
+        """
         self.logger.info(self._format_message(message), extra=kwargs)
     
-    def warning(self, message: str, **kwargs):
-        """Log warning message."""
+    def warning(self, message: str, **kwargs) -> None:
+        """
+        Log warning message.
+
+        Args:
+            message: The message to log.
+            **kwargs: The keyword arguments.
+        """
         self.logger.warning(self._format_message(message), extra=kwargs)
     
-    def error(self, message: str, **kwargs):
-        """Log error message."""
+    def error(self, message: str, **kwargs) -> None:
+        """
+        Log error message.
+
+        Args:
+            message: The message to log.
+            **kwargs: The keyword arguments.
+        """
         self.logger.error(self._format_message(message), extra=kwargs)
     
-    def critical(self, message: str, **kwargs):
-        """Log critical message."""
+    def critical(self, message: str, **kwargs) -> None:
+        """
+        Log critical message.
+
+        Args:
+            message: The message to log.
+            **kwargs: The keyword arguments.
+        """
         self.logger.critical(self._format_message(message), extra=kwargs)
     
-    def exception(self, message: str, **kwargs):
-        """Log exception message."""
+    def exception(self, message: str, **kwargs) -> None:
+        """
+        Log exception message.
+
+        Args:
+            message: The message to log.
+            **kwargs: The keyword arguments.
+        """
         self.logger.exception(self._format_message(message), extra=kwargs)
 
 
 class RequestLogger:
-    """Request-specific logger."""
+    """
+    Request-specific logger.
+
+    Attributes:
+        request_id: The request ID.
+        user_id: The user ID.
+        logger: The logger instance.
+    """
     
-    def __init__(self, request_id: str, user_id: Optional[str] = None):
+    def __init__(self, request_id: str, user_id: Optional[str] = None) -> None:
+        """
+        Initialize the request logger.
+
+        Args:
+            request_id: The request ID.
+            user_id: The user ID.
+        """
         self.request_id = request_id
         self.user_id = user_id
         self.logger = StructuredLogger("marketplace.api").bind(
@@ -164,8 +249,16 @@ class RequestLogger:
             user_id=user_id
         )
     
-    def log_request(self, method: str, path: str, status_code: int, duration: float):
-        """Log HTTP request."""
+    def log_request(self, method: str, path: str, status_code: int, duration: float) -> None:
+        """
+        Log HTTP request.
+
+        Args:
+            method: The HTTP method.
+            path: The path of the request.
+            status_code: The status code of the request.
+            duration: The duration of the request.
+        """
         self.logger.info(
             f"HTTP {method} {path} {status_code}",
             extra={
@@ -177,8 +270,14 @@ class RequestLogger:
             }
         )
     
-    def log_error(self, error: Exception, context: Optional[Dict[str, Any]] = None):
-        """Log error with context."""
+    def log_error(self, error: Exception, context: Optional[Dict[str, Any]] = None) -> None:
+        """
+        Log error with context.
+
+        Args:
+            error: The error to log.
+            context: The context of the error.
+        """
         self.logger.error(
             f"Error: {str(error)}",
             extra={
@@ -190,7 +289,7 @@ class RequestLogger:
         )
 
 
-def setup_logging():
+def setup_logging() -> None:
     """Setup logging configuration."""
     # Create logs directory
     Path("logs").mkdir(exist_ok=True)
@@ -201,26 +300,70 @@ def setup_logging():
 
 
 def get_logger(name: str) -> StructuredLogger:
-    """Get structured logger by name."""
+    """
+    Get structured logger by name.
+
+    Args:
+        name: The name of the logger.
+
+    Returns:
+        StructuredLogger: The structured logger.
+    """
     return StructuredLogger(name)
 
 
 def get_request_logger(request_id: str, user_id: Optional[str] = None) -> RequestLogger:
-    """Get request-specific logger."""
+    """
+    Get request-specific logger.
+
+    Args:
+        request_id: The request ID.
+        user_id: The user ID.
+
+    Returns:
+        RequestLogger: The request-specific logger.
+    """
     return RequestLogger(request_id, user_id)
 
 
 # Performance logging decorator
-def log_performance(logger_name: str = "marketplace"):
-    """Decorator to log function performance."""
-    def decorator(func):
+def log_performance(logger_name: str = "marketplace") -> Callable:
+    """
+    Decorator to log function performance.
+
+    Args:
+        logger_name: The name of the logger.
+
+    Returns:
+        Callable: The decorator.
+    """
+    def decorator(func: Callable) -> Callable:
+        """
+        Decorator to log function performance.
+
+        Args:
+            func: The function to log.
+
+        Returns:
+            Callable: The decorated function.
+        """
         logger = get_logger(logger_name)
         
-        async def async_wrapper(*args, **kwargs):
-            start_time = datetime.utcnow()
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            """
+            Async wrapper to log function performance.
+
+            Args:
+                *args: The arguments.
+                **kwargs: The keyword arguments.
+
+            Returns:
+                Any: The result of the function.
+            """
+            start_time = datetime.now(UTC)
             try:
                 result = await func(*args, **kwargs)
-                duration = (datetime.utcnow() - start_time).total_seconds()
+                duration = (datetime.now(UTC) - start_time).total_seconds()
                 logger.info(
                     f"Function {func.__name__} completed",
                     extra={
@@ -231,7 +374,7 @@ def log_performance(logger_name: str = "marketplace"):
                 )
                 return result
             except Exception as e:
-                duration = (datetime.utcnow() - start_time).total_seconds()
+                duration = (datetime.now(UTC) - start_time).total_seconds()
                 logger.error(
                     f"Function {func.__name__} failed",
                     extra={
@@ -243,11 +386,21 @@ def log_performance(logger_name: str = "marketplace"):
                 )
                 raise
         
-        def sync_wrapper(*args, **kwargs):
-            start_time = datetime.utcnow()
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+            """
+            Sync wrapper to log function performance.
+
+            Args:
+                *args: The arguments.
+                **kwargs: The keyword arguments.
+
+            Returns:
+                Any: The result of the function.
+            """
+            start_time = datetime.now(UTC)
             try:
                 result = func(*args, **kwargs)
-                duration = (datetime.utcnow() - start_time).total_seconds()
+                duration = (datetime.now(UTC) - start_time).total_seconds()
                 logger.info(
                     f"Function {func.__name__} completed",
                     extra={
@@ -258,7 +411,7 @@ def log_performance(logger_name: str = "marketplace"):
                 )
                 return result
             except Exception as e:
-                duration = (datetime.utcnow() - start_time).total_seconds()
+                duration = (datetime.now(UTC) - start_time).total_seconds()
                 logger.error(
                     f"Function {func.__name__} failed",
                     extra={

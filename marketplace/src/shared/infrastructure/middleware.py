@@ -1,22 +1,35 @@
 """FastAPI middleware for logging and caching."""
 
+# Python imports
 import time
 import uuid
-from typing import Callable
-
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
+# Local imports
 from src.shared.infrastructure.cache import cache
 from src.shared.infrastructure.logging import get_request_logger
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
-    """Middleware for logging HTTP requests."""
+    """
+    Middleware for logging HTTP requests.
+
+    Attributes:
+        dispatch: The dispatch method.
+    """
     
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        """
+        Dispatch the request.
+
+        Args:
+            request: The request.
+            call_next: The next middleware.
+
+        Returns:
+            Response: The response.
+        """
         # Generate request ID
         request_id = str(uuid.uuid4())
         request.state.request_id = request_id
@@ -79,7 +92,12 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
 
 class CacheMiddleware(BaseHTTPMiddleware):
-    """Middleware for caching responses."""
+    """
+    Middleware for caching responses.
+
+    Attributes:
+        dispatch: The dispatch method.
+    """
     
     def __init__(
         self, 
@@ -88,16 +106,34 @@ class CacheMiddleware(BaseHTTPMiddleware):
         default_ttl: int = 300,  # 5 minutes
         cacheable_methods: set = None,
         cacheable_paths: set = None
-    ):
+    ) -> None:
+        """
+        Initialize the cache middleware.
+
+        Args:
+            app: The FastAPI app.
+            cache_prefix: The cache prefix.
+            default_ttl: The default TTL.
+            cacheable_methods: The cacheable methods.
+            cacheable_paths: The cacheable paths.
+        """
         super().__init__(app)
         self.cache_prefix = cache_prefix
         self.default_ttl = default_ttl
         self.cacheable_methods = cacheable_methods or {"GET"}
         self.cacheable_paths = cacheable_paths or {"/products", "/categories", "/brands"}
     
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        """
+        Dispatch the request.
+
+        Args:
+            request: The request.
+            call_next: The next middleware.
+
+        Returns:
+            Response: The response.
+        """
         # Check if request is cacheable
         if not self._is_cacheable(request):
             return await call_next(request)
@@ -129,14 +165,30 @@ class CacheMiddleware(BaseHTTPMiddleware):
         return response
     
     def _is_cacheable(self, request: Request) -> bool:
-        """Check if request is cacheable."""
+        """
+        Check if request is cacheable.
+
+        Args:
+            request: The request.
+
+        Returns:
+            bool: True if request is cacheable, False otherwise.
+        """
         return (
             request.method in self.cacheable_methods and
             any(request.url.path.startswith(path) for path in self.cacheable_paths)
         )
     
     def _generate_cache_key(self, request: Request) -> str:
-        """Generate cache key for request."""
+        """
+        Generate cache key for request.
+
+        Args:
+            request: The request.
+
+        Returns:
+            str: The cache key.
+        """
         # Include method, path, and query parameters
         key_parts = [
             self.cache_prefix,
@@ -146,8 +198,14 @@ class CacheMiddleware(BaseHTTPMiddleware):
         ]
         return ":".join(key_parts)
     
-    async def _cache_response(self, cache_key: str, response: Response):
-        """Cache response."""
+    async def _cache_response(self, cache_key: str, response: Response) -> None:
+        """
+        Cache response.
+
+        Args:
+            cache_key: The cache key.
+            response: The response.
+        """
         try:
             # Get response content
             content = b""
@@ -179,21 +237,42 @@ class CacheMiddleware(BaseHTTPMiddleware):
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    """Middleware for rate limiting."""
+    """
+    Middleware for rate limiting.
+
+    Attributes:
+        dispatch: The dispatch method.
+    """
     
     def __init__(
         self, 
         app, 
         requests_per_minute: int = 60,
         requests_per_hour: int = 1000
-    ):
+    ) -> None:
+        """
+        Initialize the rate limit middleware.
+
+        Args:
+            app: The FastAPI app.
+            requests_per_minute: The requests per minute.
+            requests_per_hour: The requests per hour.
+        """
         super().__init__(app)
         self.requests_per_minute = requests_per_minute
         self.requests_per_hour = requests_per_hour
     
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        """
+        Dispatch the request.
+
+        Args:
+            request: The request.
+            call_next: The next middleware.
+
+        Returns:
+            Response: The response.
+        """
         # Get client identifier (IP or user ID)
         client_id = self._get_client_id(request)
         
@@ -220,14 +299,30 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         return response
     
     def _get_client_id(self, request: Request) -> str:
-        """Get client identifier."""
+        """
+        Get client identifier.
+
+        Args:
+            request: The request.
+
+        Returns:
+            str: The client identifier.
+        """
         # Use user ID if authenticated, otherwise use IP
         if hasattr(request.state, "user") and request.state.user:
             return f"user:{request.state.user.id}"
         return f"ip:{request.client.host if request.client else 'unknown'}"
     
     async def _is_rate_limited(self, client_id: str) -> bool:
-        """Check if client is rate limited."""
+        """
+        Check if client is rate limited.
+
+        Args:
+            client_id: The client identifier.
+
+        Returns:
+            bool: True if client is rate limited, False otherwise.
+        """
         # Check minute limit
         minute_key = f"rate_limit:minute:{client_id}"
         minute_count = await cache.get(minute_key)
@@ -242,8 +337,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         
         return False
     
-    async def _increment_request_count(self, client_id: str):
-        """Increment request count for client."""
+    async def _increment_request_count(self, client_id: str) -> None:
+        """
+        Increment request count for client.
+
+        Args:
+            client_id: The client identifier.
+        """
         # Increment minute count
         minute_key = f"rate_limit:minute:{client_id}"
         await cache.incr(minute_key)
@@ -255,7 +355,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         await cache.expire(hour_key, 3600)  # Expire in 1 hour
     
     async def _get_remaining_requests(self, client_id: str) -> int:
-        """Get remaining requests for client."""
+        """
+        Get remaining requests for client.
+
+        Args:
+            client_id: The client identifier.
+
+        Returns:
+            int: The remaining requests.
+        """
         minute_key = f"rate_limit:minute:{client_id}"
         minute_count = await cache.get(minute_key)
         current_count = int(minute_count) if minute_count else 0
@@ -263,11 +371,21 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
 
 class SecurityMiddleware(BaseHTTPMiddleware):
-    """Middleware for security headers."""
+    """
+    Middleware for security headers.
+
+    Attributes:
+        dispatch: The dispatch method.
+    """
     
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        """
+        Dispatch the request.
+
+        Args:
+            request: The request.
+            call_next: The next middleware.
+        """
         response = await call_next(request)
         
         # Add security headers

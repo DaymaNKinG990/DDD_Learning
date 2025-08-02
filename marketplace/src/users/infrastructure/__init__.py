@@ -1,5 +1,6 @@
 """Infrastructure layer for users domain."""
 
+# Local imports
 from .models import CustomerModel, SellerModel, UserModel
 from .repositories import (
     InMemoryCustomerRepository,

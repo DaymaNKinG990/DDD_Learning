@@ -1,12 +1,23 @@
 """Domain events for users bounded context."""
 
+# Python imports
 from typing import Any, Dict, Optional
 
+# Local imports
 from src.shared.domain.events import DomainEvent
 
 
 class UserCreated(DomainEvent):
-    """Event raised when a user is created."""
+    """
+    Event raised when a user is created.
+    
+    Attributes:
+        user_id: The ID of the user.
+        email: The email of the user.
+        first_name: The first name of the user.
+        last_name: The last name of the user.
+        phone_number: The phone number of the user.
+    """
 
     user_id: str
     email: str
@@ -15,6 +26,12 @@ class UserCreated(DomainEvent):
     phone_number: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the event to a dictionary.
+        
+        Returns:
+            Dict[str, Any]: The dictionary representation of the event.
+        """
         return {
             "event_id": str(self.event_id),
             "event_type": self.event_type,
@@ -30,7 +47,15 @@ class UserCreated(DomainEvent):
 
 
 class UserUpdated(DomainEvent):
-    """Event raised when a user is updated."""
+    """
+    Event raised when a user is updated.
+    
+    Attributes:
+        user_id: The ID of the user.
+        first_name: The first name of the user.
+        last_name: The last name of the user.
+        phone_number: The phone number of the user.
+    """
 
     user_id: str
     first_name: Optional[str] = None
@@ -38,6 +63,12 @@ class UserUpdated(DomainEvent):
     phone_number: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the event to a dictionary.
+        
+        Returns:
+            Dict[str, Any]: The dictionary representation of the event.
+        """
         return {
             "event_id": str(self.event_id),
             "event_type": self.event_type,
@@ -52,12 +83,24 @@ class UserUpdated(DomainEvent):
 
 
 class UserDeactivated(DomainEvent):
-    """Event raised when a user is deactivated."""
+    """
+    Event raised when a user is deactivated.
+    
+    Attributes:
+        user_id: The ID of the user.
+        reason: The reason for deactivation.
+    """
 
     user_id: str
     reason: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the event to a dictionary.
+        
+        Returns:
+            Dict[str, Any]: The dictionary representation of the event.
+        """
         return {
             "event_id": str(self.event_id),
             "event_type": self.event_type,
@@ -70,7 +113,15 @@ class UserDeactivated(DomainEvent):
 
 
 class CustomerCreated(DomainEvent):
-    """Event raised when a customer is created."""
+    """
+    Event raised when a customer is created.
+    
+    Attributes:
+        customer_id: The ID of the customer.
+        user_id: The ID of the user.
+        shipping_address: The shipping address of the customer.
+        billing_address: The billing address of the customer.
+    """
 
     customer_id: str
     user_id: str
@@ -78,6 +129,12 @@ class CustomerCreated(DomainEvent):
     billing_address: str
 
     def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the event to a dictionary.
+        
+        Returns:
+            Dict[str, Any]: The dictionary representation of the event.
+        """
         return {
             "event_id": str(self.event_id),
             "event_type": self.event_type,
@@ -92,13 +149,26 @@ class CustomerCreated(DomainEvent):
 
 
 class CustomerAddressAdded(DomainEvent):
-    """Event raised when an address is added to a customer."""
+    """
+    Event raised when an address is added to a customer.
+    
+    Attributes:
+        customer_id: The ID of the customer.
+        address_type: The type of address.
+        address: The address.
+    """
 
     customer_id: str
     address_type: str  # "shipping" or "billing"
     address: str
 
     def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the event to a dictionary.
+        
+        Returns:
+            Dict[str, Any]: The dictionary representation of the event.
+        """
         return {
             "event_id": str(self.event_id),
             "event_type": self.event_type,
@@ -112,7 +182,16 @@ class CustomerAddressAdded(DomainEvent):
 
 
 class SellerCreated(DomainEvent):
-    """Event raised when a seller is created."""
+    """
+    Event raised when a seller is created.
+    
+    Attributes:
+        seller_id: The ID of the seller.
+        user_id: The ID of the user.
+        company_name: The name of the company.
+        company_description: The description of the company.
+        website: The website of the company.
+    """
 
     seller_id: str
     user_id: str
@@ -121,6 +200,12 @@ class SellerCreated(DomainEvent):
     website: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the event to a dictionary.
+        
+        Returns:
+            Dict[str, Any]: The dictionary representation of the event.
+        """
         return {
             "event_id": str(self.event_id),
             "event_type": self.event_type,
@@ -136,13 +221,26 @@ class SellerCreated(DomainEvent):
 
 
 class SellerVerified(DomainEvent):
-    """Event raised when a seller is verified."""
+    """
+    Event raised when a seller is verified.
+    
+    Attributes:
+        seller_id: The ID of the seller.
+        verified_by: The ID of the user who verified the seller.
+        verification_notes: The notes from the verification.
+    """
 
     seller_id: str
     verified_by: str
     verification_notes: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the event to a dictionary.
+        
+        Returns:
+            Dict[str, Any]: The dictionary representation of the event.
+        """
         return {
             "event_id": str(self.event_id),
             "event_type": self.event_type,
@@ -156,13 +254,26 @@ class SellerVerified(DomainEvent):
 
 
 class SellerUnverified(DomainEvent):
-    """Event raised when a seller is unverified."""
+    """
+    Event raised when a seller is unverified.
+    
+    Attributes:
+        seller_id: The ID of the seller.
+        unverified_by: The ID of the user who unverified the seller.
+        reason: The reason for unverification.
+    """
 
     seller_id: str
     unverified_by: str
     reason: str
 
     def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the event to a dictionary.
+        
+        Returns:
+            Dict[str, Any]: The dictionary representation of the event.
+        """
         return {
             "event_id": str(self.event_id),
             "event_type": self.event_type,

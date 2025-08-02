@@ -1,25 +1,47 @@
 """Service client for inter-service communication."""
 
+# Python imports
 import asyncio
-from typing import Any, Dict, Optional
+from types import TracebackType
+from typing import Any, Dict, Optional, Type
 import httpx
-from pydantic import BaseModel
 
+# Local imports
 from src.shared.infrastructure.logging import get_logger
 from src.shared.infrastructure.error_handlers import ExternalServiceError
 
 
 class ServiceClient:
-    """HTTP client for inter-service communication."""
+    """
+    HTTP client for inter-service communication.
     
-    def __init__(self, base_url: str, timeout: float = 30.0):
+    Attributes:
+        base_url: The base URL of the service.
+        timeout: The timeout for the client.
+        logger: The logger for the client.
+        _client: The HTTP client.
+    """
+    
+    def __init__(self, base_url: str, timeout: float = 30.0) -> None:
+        """
+        Initialize the service client.
+        
+        Args:
+            base_url: The base URL of the service.
+            timeout: The timeout for the client.
+        """
         self.base_url = base_url.rstrip('/')
         self.timeout = timeout
         self.logger = get_logger(f"marketplace.service_client.{base_url}")
         self._client: Optional[httpx.AsyncClient] = None
     
-    async def __aenter__(self):
-        """Async context manager entry."""
+    async def __aenter__(self) -> "ServiceClient":
+        """
+        Async context manager entry.
+        
+        Returns:
+            ServiceClient: The service client.
+        """
         self._client = httpx.AsyncClient(
             base_url=self.base_url,
             timeout=self.timeout,
@@ -27,13 +49,29 @@ class ServiceClient:
         )
         return self
     
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit."""
+    async def __aexit__(self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]) -> None:
+        """
+        Async context manager exit.
+        
+        Args:
+            exc_type: The type of the exception.
+            exc_val: The value of the exception.
+            exc_tb: The traceback of the exception.
+        """
         if self._client:
             await self._client.aclose()
     
     async def get(self, path: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Make GET request."""
+        """
+        Make GET request.
+        
+        Args:
+            path: The path of the request.
+            params: The parameters of the request.
+
+        Returns:
+            Dict[str, Any]: The response from the request.
+        """
         if not self._client:
             raise RuntimeError("ServiceClient must be used as async context manager")
         
@@ -57,7 +95,17 @@ class ServiceClient:
             )
     
     async def post(self, path: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Make POST request."""
+        """
+        Make POST request.
+        
+        Args:
+            path: The path of the request.
+            data: The data of the request.
+
+        Returns:
+            Dict[str, Any]: The response from the request.
+        """
+
         if not self._client:
             raise RuntimeError("ServiceClient must be used as async context manager")
         
@@ -81,7 +129,17 @@ class ServiceClient:
             )
     
     async def put(self, path: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Make PUT request."""
+        """
+        Make PUT request.
+        
+        Args:
+            path: The path of the request.
+            data: The data of the request.
+
+        Returns:
+            Dict[str, Any]: The response from the request.
+        """
+
         if not self._client:
             raise RuntimeError("ServiceClient must be used as async context manager")
         
@@ -105,7 +163,16 @@ class ServiceClient:
             )
     
     async def delete(self, path: str) -> Dict[str, Any]:
-        """Make DELETE request."""
+        """
+        Make DELETE request.
+        
+        Args:
+            path: The path of the request.
+
+        Returns:
+            Dict[str, Any]: The response from the request.
+        """
+
         if not self._client:
             raise RuntimeError("ServiceClient must be used as async context manager")
         
@@ -130,9 +197,15 @@ class ServiceClient:
 
 
 class ServiceRegistry:
-    """Registry for service URLs."""
+    """
+    Registry for service URLs.
     
-    def __init__(self):
+    Attributes:
+        services: The services.
+    """
+    
+    def __init__(self) -> None:
+        """Initialize the service registry."""
         self.services = {
             "catalog": "http://catalog:8001",
             "orders": "http://orders:8002",
@@ -143,13 +216,29 @@ class ServiceRegistry:
         }
     
     def get_service_url(self, service_name: str) -> str:
-        """Get service URL by name."""
+        """
+        Get service URL by name.
+        
+        Args:
+            service_name: The name of the service.
+
+        Returns:
+            str: The URL of the service.
+        """
         if service_name not in self.services:
             raise ValueError(f"Unknown service: {service_name}")
         return self.services[service_name]
     
     def get_client(self, service_name: str) -> ServiceClient:
-        """Get service client by name."""
+        """
+        Get service client by name.
+        
+        Args:
+            service_name: The name of the service.
+
+        Returns:
+            ServiceClient: The service client.
+        """
         url = self.get_service_url(service_name)
         return ServiceClient(url)
 
@@ -160,7 +249,18 @@ service_registry = ServiceRegistry()
 
 # Convenience functions
 async def call_service(service_name: str, method: str, path: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """Call service with retry logic."""
+    """
+    Call service with retry logic.
+    
+    Args:
+        service_name: The name of the service.
+        method: The method of the request.
+        path: The path of the request.
+        data: The data of the request.
+
+    Returns:
+        Dict[str, Any]: The response from the request.
+    """
     client = service_registry.get_client(service_name)
     
     async with client:
@@ -184,7 +284,20 @@ async def call_service_with_retry(
     max_retries: int = 3,
     delay: float = 1.0
 ) -> Dict[str, Any]:
-    """Call service with retry logic."""
+    """
+    Call service with retry logic.
+    
+    Args:
+        service_name: The name of the service.
+        method: The method of the request.
+        path: The path of the request.
+        data: The data of the request.
+        max_retries: The maximum number of retries.
+        delay: The delay between retries.
+
+    Returns:
+        Dict[str, Any]: The response from the request.
+    """
     last_exception = None
     
     for attempt in range(max_retries):

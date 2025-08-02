@@ -1,5 +1,6 @@
 """Users domain models."""
 
+# Local imports
 from .entities import Customer, Seller, User
 from .value_objects import CustomerId, Email, PhoneNumber, SellerId, UserId
 
