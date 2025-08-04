@@ -189,14 +189,14 @@ class ShippingProvider(Entity):
             ShippingCost: The calculated shipping cost.
         """
         # Simple calculation - in real implementation would be more complex
-        base_cost = self.base_cost.value
+        base_cost = self.base_cost.amount
         if method == ShippingMethod.EXPRESS:
-            base_cost *= 1.5
+            base_cost *= Decimal("2.0")
         elif method == ShippingMethod.PREMIUM:
-            base_cost *= 2.0
+            base_cost *= Decimal("3.0")
 
         # Apply weight multiplier
-        total_cost = base_cost * weight
+        total_cost = base_cost * Decimal(str(weight))
         return ShippingCost(
-            value=Decimal(str(total_cost)), currency=self.base_cost.currency
+            amount=total_cost, currency=self.base_cost.currency
         )

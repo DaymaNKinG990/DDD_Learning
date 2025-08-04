@@ -98,7 +98,9 @@ class NotificationService:
         saved_notification = await self.notification_repository.save(notification)
         
         if self.event_handler:
-            await self.event_handler.handle(NotificationCreated(notification_id=notification.id))
+            await self.event_handler.handle(NotificationCreated(
+                notification_id=notification.id
+            ))
         
         return saved_notification
 
@@ -162,7 +164,9 @@ class NotificationService:
         saved_batch = await self.batch_repository.save(batch)
         
         if self.event_handler:
-            await self.event_handler.handle(BatchProcessingStarted(batch_id=batch.id))
+            await self.event_handler.handle(BatchProcessingStarted(
+                batch_id=batch.id
+            ))
         
         return saved_batch
 
@@ -184,7 +188,9 @@ class NotificationService:
         saved_batch = await self.batch_repository.save(batch)
         
         if self.event_handler:
-            await self.event_handler.handle(BatchProcessingCompleted(batch_id=batch.id))
+            await self.event_handler.handle(BatchProcessingCompleted(
+                batch_id=batch.id
+            ))
         
         return saved_batch
 
@@ -208,7 +214,9 @@ class NotificationService:
         saved_notification = await self.notification_repository.save(notification)
         
         if self.event_handler:
-            await self.event_handler.handle(NotificationSent(notification_id=notification.id))
+            await self.event_handler.handle(NotificationSent(
+                notification_id=notification.id
+            ))
         
         return saved_notification
 
@@ -232,7 +240,9 @@ class NotificationService:
         saved_notification = await self.notification_repository.save(notification)
         
         if self.event_handler:
-            await self.event_handler.handle(NotificationDelivered(notification_id=notification.id))
+            await self.event_handler.handle(NotificationDelivered(
+                notification_id=notification.id
+            ))
         
         return saved_notification
 
@@ -257,7 +267,10 @@ class NotificationService:
         saved_notification = await self.notification_repository.save(notification)
         
         if self.event_handler:
-            await self.event_handler.handle(NotificationFailed(notification_id=notification.id))
+            await self.event_handler.handle(NotificationFailed(
+                notification_id=notification.id,
+                error_message=error_message
+            ))
         
         return saved_notification
 

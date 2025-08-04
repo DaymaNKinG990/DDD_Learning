@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.shared.infrastructure.sql_repositories import SQLRepository
 from src.users.domain.entities import Customer, Seller, User
 from src.users.domain.repositories import CustomerRepository, SellerRepository, UserRepository
-from src.users.domain.value_objects import CustomerId, Email, SellerId, UserId
+from src.users.domain.value_objects import CustomerId, Email, SellerId, UserId, Username, PhoneNumber
 from src.users.infrastructure.models import CustomerModel, SellerModel, UserModel
 
 
@@ -39,7 +39,8 @@ class SQLUserRepository(SQLRepository[UserModel], UserRepository):
         user_model = UserModel(
             id=user.id.value,
             email=user.email.value,
-            password_hash=user.password_hash,
+            username=user.username.value,
+            password_hash="",  # This should be handled separately in auth service
             first_name=user.first_name,
             last_name=user.last_name,
             phone_number=user.phone_number.value if user.phone_number else None,
@@ -52,10 +53,10 @@ class SQLUserRepository(SQLRepository[UserModel], UserRepository):
         return User(
             id=UserId(value=saved_model.id),
             email=Email(value=saved_model.email),
-            password_hash=saved_model.password_hash,
+            username=Username(value=saved_model.username),
             first_name=saved_model.first_name,
             last_name=saved_model.last_name,
-            phone_number=saved_model.phone_number,
+            phone_number=PhoneNumber(value=saved_model.phone_number) if saved_model.phone_number else None,
             is_active=saved_model.is_active,
         )
     
@@ -76,10 +77,10 @@ class SQLUserRepository(SQLRepository[UserModel], UserRepository):
         return User(
             id=UserId(value=user_model.id),
             email=Email(value=user_model.email),
-            password_hash=user_model.password_hash,
+            username=Username(value=user_model.username),
             first_name=user_model.first_name,
             last_name=user_model.last_name,
-            phone_number=user_model.phone_number,
+            phone_number=PhoneNumber(value=user_model.phone_number) if user_model.phone_number else None,
             is_active=user_model.is_active,
         )
     
@@ -103,12 +104,63 @@ class SQLUserRepository(SQLRepository[UserModel], UserRepository):
         return User(
             id=UserId(value=user_model.id),
             email=Email(value=user_model.email),
-            password_hash=user_model.password_hash,
+            username=Username(value=user_model.username),
             first_name=user_model.first_name,
             last_name=user_model.last_name,
-            phone_number=user_model.phone_number,
+            phone_number=PhoneNumber(value=user_model.phone_number) if user_model.phone_number else None,
             is_active=user_model.is_active,
         )
+    
+    async def get_by_username(self, username: Username) -> Optional[User]:
+        """
+        Get user by username.
+        
+        Args:
+            username: The username of the user.
+
+        Returns:
+            Optional[User]: The user.
+        """
+        stmt = select(UserModel).where(UserModel.username == username.value)
+        result = await self.session.execute(stmt)
+        user_model = result.scalar_one_or_none()
+        
+        if not user_model:
+            return None
+        
+        return User(
+            id=UserId(value=user_model.id),
+            email=Email(value=user_model.email),
+            username=Username(value=user_model.username),
+            first_name=user_model.first_name,
+            last_name=user_model.last_name,
+            phone_number=PhoneNumber(value=user_model.phone_number) if user_model.phone_number else None,
+            is_active=user_model.is_active,
+        )
+    
+    async def get_active_users(self) -> List[User]:
+        """
+        Get all active users.
+        
+        Returns:
+            List[User]: The active users.
+        """
+        stmt = select(UserModel).where(UserModel.is_active == True)
+        result = await self.session.execute(stmt)
+        user_models = result.scalars().all()
+        
+        return [
+            User(
+                id=UserId(value=user_model.id),
+                email=Email(value=user_model.email),
+                username=Username(value=user_model.username),
+                first_name=user_model.first_name,
+                last_name=user_model.last_name,
+                phone_number=PhoneNumber(value=user_model.phone_number) if user_model.phone_number else None,
+                is_active=user_model.is_active,
+            )
+            for user_model in user_models
+        ]
     
     async def get_all(self) -> List[User]:
         """
@@ -123,10 +175,10 @@ class SQLUserRepository(SQLRepository[UserModel], UserRepository):
             User(
                 id=UserId(value=model.id),
                 email=Email(value=model.email),
-                password_hash=model.password_hash,
+                username=Username(value=model.username),
                 first_name=model.first_name,
                 last_name=model.last_name,
-                phone_number=model.phone_number,
+                phone_number=PhoneNumber(value=model.phone_number) if model.phone_number else None,
                 is_active=model.is_active,
             )
             for model in user_models
@@ -175,8 +227,8 @@ class SQLCustomerRepository(SQLRepository[CustomerModel], CustomerRepository):
         customer_model = CustomerModel(
             id=customer.id.value,
             user_id=customer.user_id.value,
-            shipping_address=customer.shipping_address,
-            billing_address=customer.billing_address,
+            shipping_address=",".join(customer.shipping_addresses),
+            billing_address=",".join(customer.billing_addresses),
         )
         
         saved_model = await super().save(customer_model)
@@ -184,8 +236,8 @@ class SQLCustomerRepository(SQLRepository[CustomerModel], CustomerRepository):
         return Customer(
             id=CustomerId(value=saved_model.id),
             user_id=UserId(value=saved_model.user_id),
-            shipping_address=saved_model.shipping_address,
-            billing_address=saved_model.billing_address,
+            shipping_addresses=saved_model.shipping_address.split(",") if saved_model.shipping_address else [],
+            billing_addresses=saved_model.billing_address.split(",") if saved_model.billing_address else [],
         )
     
     async def get_by_id(self, customer_id: CustomerId) -> Optional[Customer]:
@@ -205,8 +257,8 @@ class SQLCustomerRepository(SQLRepository[CustomerModel], CustomerRepository):
         return Customer(
             id=CustomerId(value=customer_model.id),
             user_id=UserId(value=customer_model.user_id),
-            shipping_address=customer_model.shipping_address,
-            billing_address=customer_model.billing_address,
+            shipping_addresses=customer_model.shipping_address.split(",") if customer_model.shipping_address else [],
+            billing_addresses=customer_model.billing_address.split(",") if customer_model.billing_address else [],
         )
     
     async def get_by_user_id(self, user_id: UserId) -> Optional[Customer]:
@@ -229,8 +281,8 @@ class SQLCustomerRepository(SQLRepository[CustomerModel], CustomerRepository):
         return Customer(
             id=CustomerId(value=customer_model.id),
             user_id=UserId(value=customer_model.user_id),
-            shipping_address=customer_model.shipping_address,
-            billing_address=customer_model.billing_address,
+            shipping_addresses=customer_model.shipping_address.split(",") if customer_model.shipping_address else [],
+            billing_addresses=customer_model.billing_address.split(",") if customer_model.billing_address else [],
         )
     
     async def get_all(self) -> List[Customer]:
@@ -246,8 +298,8 @@ class SQLCustomerRepository(SQLRepository[CustomerModel], CustomerRepository):
             Customer(
                 id=CustomerId(value=model.id),
                 user_id=UserId(value=model.user_id),
-                shipping_address=model.shipping_address,
-                billing_address=model.billing_address,
+                shipping_addresses=model.shipping_address.split(",") if model.shipping_address else [],
+                billing_addresses=model.billing_address.split(",") if model.billing_address else [],
             )
             for model in customer_models
         ]
@@ -296,8 +348,9 @@ class SQLSellerRepository(SQLRepository[SellerModel], SellerRepository):
             id=seller.id.value,
             user_id=seller.user_id.value,
             company_name=seller.company_name,
+            business_address=seller.business_address,
             company_description=seller.company_description,
-            website=seller.website,
+            tax_id=seller.tax_id,
             is_verified=seller.is_verified,
         )
         
@@ -307,8 +360,9 @@ class SQLSellerRepository(SQLRepository[SellerModel], SellerRepository):
             id=SellerId(value=saved_model.id),
             user_id=UserId(value=saved_model.user_id),
             company_name=saved_model.company_name,
+            business_address=saved_model.business_address,
             company_description=saved_model.company_description,
-            website=saved_model.website,
+            tax_id=saved_model.tax_id,
             is_verified=saved_model.is_verified,
         )
     
@@ -330,8 +384,9 @@ class SQLSellerRepository(SQLRepository[SellerModel], SellerRepository):
             id=SellerId(value=seller_model.id),
             user_id=UserId(value=seller_model.user_id),
             company_name=seller_model.company_name,
+            business_address=seller_model.business_address,
             company_description=seller_model.company_description,
-            website=seller_model.website,
+            tax_id=seller_model.tax_id,
             is_verified=seller_model.is_verified,
         )
     
@@ -356,8 +411,9 @@ class SQLSellerRepository(SQLRepository[SellerModel], SellerRepository):
             id=SellerId(value=seller_model.id),
             user_id=UserId(value=seller_model.user_id),
             company_name=seller_model.company_name,
+            business_address=seller_model.business_address,
             company_description=seller_model.company_description,
-            website=seller_model.website,
+            tax_id=seller_model.tax_id,
             is_verified=seller_model.is_verified,
         )
     
@@ -375,8 +431,9 @@ class SQLSellerRepository(SQLRepository[SellerModel], SellerRepository):
                 id=SellerId(value=model.id),
                 user_id=UserId(value=model.user_id),
                 company_name=model.company_name,
+                business_address=model.business_address,
                 company_description=model.company_description,
-                website=model.website,
+                tax_id=model.tax_id,
                 is_verified=model.is_verified,
             )
             for model in seller_models
@@ -398,8 +455,9 @@ class SQLSellerRepository(SQLRepository[SellerModel], SellerRepository):
                 id=SellerId(value=model.id),
                 user_id=UserId(value=model.user_id),
                 company_name=model.company_name,
+                business_address=model.business_address,
                 company_description=model.company_description,
-                website=model.website,
+                tax_id=model.tax_id,
                 is_verified=model.is_verified,
             )
             for model in seller_models

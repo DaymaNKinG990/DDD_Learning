@@ -11,7 +11,7 @@ from src.users.domain.repositories import (
     SellerRepository,
     UserRepository,
 )
-from src.users.domain.value_objects import CustomerId, Email, SellerId, UserId
+from src.users.domain.value_objects import CustomerId, Email, SellerId, UserId, Username
 
 
 class InMemoryUserRepository(InMemoryRepository[User], UserRepository):
@@ -21,6 +21,7 @@ class InMemoryUserRepository(InMemoryRepository[User], UserRepository):
     Attributes:
         _users: A dictionary of users.
         _users_by_email: A dictionary of users by email.
+        _users_by_username: A dictionary of users by username.
     """
 
     def __init__(self) -> None:
@@ -28,6 +29,7 @@ class InMemoryUserRepository(InMemoryRepository[User], UserRepository):
         super().__init__()
         self._users: Dict[str, User] = {}
         self._users_by_email: Dict[str, User] = {}
+        self._users_by_username: Dict[str, User] = {}
 
     async def save(self, user: User) -> User:
         """
@@ -41,6 +43,7 @@ class InMemoryUserRepository(InMemoryRepository[User], UserRepository):
         """
         self._users[str(user.id)] = user
         self._users_by_email[user.email.value] = user
+        self._users_by_username[user.username.value] = user
         return user
 
     async def get_by_id(self, user_id: UserId) -> Optional[User]:
@@ -67,6 +70,27 @@ class InMemoryUserRepository(InMemoryRepository[User], UserRepository):
         """
         return self._users_by_email.get(email.value)
 
+    async def get_by_username(self, username: Username) -> Optional[User]:
+        """
+        Get user by username.
+        
+        Args:
+            username: The username of the user.
+
+        Returns:
+            Optional[User]: The user.
+        """
+        return self._users_by_username.get(username.value)
+
+    async def get_active_users(self) -> List[User]:
+        """
+        Get all active users.
+        
+        Returns:
+            List[User]: The active users.
+        """
+        return [user for user in self._users.values() if user.is_active]
+
     async def get_all(self) -> List[User]:
         """
         Get all users.
@@ -90,6 +114,7 @@ class InMemoryUserRepository(InMemoryRepository[User], UserRepository):
         if user:
             del self._users[str(user_id)]
             del self._users_by_email[user.email.value]
+            del self._users_by_username[user.username.value]
             return True
         return False
 

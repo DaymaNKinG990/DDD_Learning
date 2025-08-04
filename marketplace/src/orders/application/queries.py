@@ -339,8 +339,13 @@ class InMemoryOrderQueryHandler(OrderQueryHandler):
             order for order in self._orders.values()
             if order.status == query.status
         ]
-        start = (query.page - 1) * query.page_size
-        end = start + query.page_size
+
+        # Sort by creation date (newest first)
+        orders.sort(key=lambda x: x.created_at, reverse=True)
+
+        # Apply pagination
+        start = query.offset or 0
+        end = start + (query.limit or 50)
         return orders[start:end]
 
     async def get_orders_by_date_range(self, query: GetOrdersByDateRangeQuery) -> List[OrderReadModel]:
@@ -357,8 +362,13 @@ class InMemoryOrderQueryHandler(OrderQueryHandler):
             order for order in self._orders.values()
             if query.start_date <= order.created_at <= query.end_date
         ]
-        start = (query.page - 1) * query.page_size
-        end = start + query.page_size
+
+        # Sort by creation date (newest first)
+        orders.sort(key=lambda x: x.created_at, reverse=True)
+
+        # Apply pagination
+        start = query.offset or 0
+        end = start + (query.limit or 50)
         return orders[start:end]
 
     async def get_order_summary(self, query: GetOrderSummaryQuery) -> Optional[OrderSummaryReadModel]:
@@ -415,6 +425,15 @@ class InMemoryOrderQueryHandler(OrderQueryHandler):
             created_at=order.created_at
         )
         self._order_summaries[order.id] = summary
+
+    def add_order_summary(self, summary: OrderSummaryReadModel) -> None:
+        """
+        Add order summary to in-memory storage.
+        
+        Args:
+            summary (OrderSummaryReadModel): The order summary to add to in-memory storage.
+        """
+        self._order_summaries[summary.id] = summary
 
     def update_order(self, order: OrderReadModel) -> None:
         """

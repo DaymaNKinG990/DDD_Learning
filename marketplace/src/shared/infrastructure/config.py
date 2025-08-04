@@ -2,8 +2,8 @@
 
 # Python imports
 from typing import Optional
-from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic import Field, ConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class DatabaseSettings(BaseSettings):
@@ -18,11 +18,13 @@ class DatabaseSettings(BaseSettings):
         password: The password of the database.
     """
     
-    host: str = Field(default="localhost", env="DB_HOST")
-    port: int = Field(default=5432, env="DB_PORT")
-    name: str = Field(default="marketplace", env="DB_NAME")
-    user: str = Field(default="postgres", env="DB_USER")
-    password: str = Field(default="password", env="DB_PASSWORD")
+    host: str = Field(default="localhost")
+    port: int = Field(default=5432)
+    name: str = Field(default="marketplace")
+    user: str = Field(default="postgres")
+    password: str = Field(default="password")
+    
+    model_config = SettingsConfigDict(env_prefix="DB_")
     
     @property
     def url(self) -> str:
@@ -56,10 +58,12 @@ class RedisSettings(BaseSettings):
         db: The database number of the Redis server.
     """
     
-    host: str = Field(default="localhost", env="REDIS_HOST")
-    port: int = Field(default=6379, env="REDIS_PORT")
-    password: Optional[str] = Field(default=None, env="REDIS_PASSWORD")
-    db: int = Field(default=0, env="REDIS_DB")
+    host: str = Field(default="localhost")
+    port: int = Field(default=6379)
+    password: Optional[str] = Field(default=None)
+    db: int = Field(default=0)
+    
+    model_config = SettingsConfigDict(env_prefix="REDIS_")
     
     @property
     def url(self) -> str:
@@ -85,10 +89,10 @@ class AppSettings(BaseSettings):
         access_token_expire_minutes: The number of minutes the access token is valid for.
     """
 
-    debug: bool = Field(default=False, env="DEBUG")
-    secret_key: str = Field(default="your-secret-key-here", env="SECRET_KEY")
-    algorithm: str = Field(default="HS256", env="ALGORITHM")
-    access_token_expire_minutes: int = Field(default=30, env="ACCESS_TOKEN_EXIRE_MINUTES")
+    debug: bool = Field(default=False)
+    secret_key: str = Field(default="your-secret-key-here")
+    algorithm: str = Field(default="HS256")
+    access_token_expire_minutes: int = Field(default=30)
     
     # Database settings
     database: DatabaseSettings = DatabaseSettings()
@@ -96,17 +100,11 @@ class AppSettings(BaseSettings):
     # Redis settings
     redis: RedisSettings = RedisSettings()
     
-    class Config:
-        """
-        Configuration for the application settings.
-        
-        Attributes:
-            env_file: The environment file to load.
-            env_file_encoding: The encoding of the environment file.
-        """
-        
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
 
 
 # Global settings instance

@@ -9,10 +9,10 @@ from src.orders.domain.value_objects import OrderId
 from src.users.domain.value_objects import UserId
 from ..domain.entities import Payment, PaymentMethod
 from ..domain.repositories import PaymentMethodRepository, PaymentRepository
-from ..domain.value_objects import PaymentId, PaymentMethodId, PaymentStatus
+from ..domain.value_objects import PaymentId, PaymentMethodId, PaymentStatus, PaymentType
 
 
-class InMemoryPaymentRepository(InMemoryRepository[Payment, PaymentId], PaymentRepository):
+class InMemoryPaymentRepository(InMemoryRepository[Payment], PaymentRepository):
     """
     In-memory implementation of PaymentRepository.
     
@@ -124,7 +124,7 @@ class InMemoryPaymentRepository(InMemoryRepository[Payment, PaymentId], PaymentR
         return False
 
 
-class InMemoryPaymentMethodRepository(InMemoryRepository[PaymentMethod, PaymentMethodId], PaymentMethodRepository):
+class InMemoryPaymentMethodRepository(InMemoryRepository[PaymentMethod], PaymentMethodRepository):
     """
     In-memory implementation of PaymentMethodRepository.
     

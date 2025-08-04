@@ -1,11 +1,13 @@
 """API Gateway for marketplace microservices."""
 
-from datetime import datetime
+# Python imports
+from datetime import UTC, datetime
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
 from typing import Dict, Any
 
+# Local imports
 from src.shared.infrastructure.middleware import (
     LoggingMiddleware,
     SecurityMiddleware,
@@ -73,7 +75,7 @@ async def health_check():
     health_status = {
         "gateway": {
             "status": "healthy",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         },
         "services": {}
     }
@@ -104,79 +106,192 @@ async def health_check():
 
 
 @app.get("/catalog/{path:path}")
-async def catalog_proxy(path: str):
-    """Proxy requests to catalog service."""
+async def catalog_proxy(path: str) -> Dict[str, Any]:
+    """
+    Proxy requests to catalog service.
+    
+    Args:
+        path: The path to proxy the request to.
+
+    Returns:
+        Dict[str, Any]: The response from the catalog service.
+    """
     return await proxy_request("catalog", path)
 
 
 @app.post("/catalog/{path:path}")
-async def catalog_proxy_post(path: str, data: Dict[str, Any]):
-    """Proxy POST requests to catalog service."""
+async def catalog_proxy_post(path: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Proxy POST requests to catalog service.
+    
+    Args:
+        path: The path to proxy the request to.
+        data: The data to send in the POST request.
+
+    Returns:
+        Dict[str, Any]: The response from the catalog service.
+    """
     return await proxy_request("catalog", path, method="POST", data=data)
 
 
 @app.get("/orders/{path:path}")
-async def orders_proxy(path: str):
-    """Proxy requests to orders service."""
+async def orders_proxy(path: str) -> Dict[str, Any]:
+    """
+    Proxy requests to orders service.
+    
+    Args:
+        path: The path to proxy the request to.
+
+    Returns:
+        Dict[str, Any]: The response from the orders service.
+    """
     return await proxy_request("orders", path)
 
 
 @app.post("/orders/{path:path}")
-async def orders_proxy_post(path: str, data: Dict[str, Any]):
-    """Proxy POST requests to orders service."""
+async def orders_proxy_post(path: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Proxy POST requests to orders service.
+    
+    Args:
+        path: The path to proxy the request to.
+        data: The data to send in the POST request.
+
+    Returns:
+        Dict[str, Any]: The response from the orders service.
+    """
     return await proxy_request("orders", path, method="POST", data=data)
 
 
 @app.get("/users/{path:path}")
-async def users_proxy(path: str):
-    """Proxy requests to users service."""
+async def users_proxy(path: str) -> Dict[str, Any]:
+    """
+    Proxy requests to users service.
+    
+    Args:
+        path: The path to proxy the request to.
+
+    Returns:
+        Dict[str, Any]: The response from the users service.
+    """
     return await proxy_request("users", path)
 
 
 @app.post("/users/{path:path}")
-async def users_proxy_post(path: str, data: Dict[str, Any]):
-    """Proxy POST requests to users service."""
+async def users_proxy_post(path: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Proxy POST requests to users service.
+    
+    Args:
+        path: The path to proxy the request to.
+        data: The data to send in the POST request.
+
+    Returns:
+        Dict[str, Any]: The response from the users service.
+    """
     return await proxy_request("users", path, method="POST", data=data)
 
 
 @app.get("/auth/{path:path}")
-async def auth_proxy(path: str):
-    """Proxy requests to auth service."""
+async def auth_proxy(path: str) -> Dict[str, Any]:
+    """
+    Proxy requests to auth service.
+    
+    Args:
+        path: The path to proxy the request to.
+
+    Returns:
+        Dict[str, Any]: The response from the auth service.
+    """
     return await proxy_request("auth", path)
 
 
 @app.post("/auth/{path:path}")
-async def auth_proxy_post(path: str, data: Dict[str, Any]):
-    """Proxy POST requests to auth service."""
+async def auth_proxy_post(path: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Proxy POST requests to auth service.
+    
+    Args:
+        path: The path to proxy the request to.
+        data: The data to send in the POST request.
+
+    Returns:
+        Dict[str, Any]: The response from the auth service.
+    """
     return await proxy_request("auth", path, method="POST", data=data)
 
 
 @app.get("/reviews/{path:path}")
-async def reviews_proxy(path: str):
-    """Proxy requests to reviews service."""
+async def reviews_proxy(path: str) -> Dict[str, Any]:
+    """
+    Proxy requests to reviews service.
+    
+    Args:
+        path: The path to proxy the request to.
+
+    Returns:
+        Dict[str, Any]: The response from the reviews service.
+    """
     return await proxy_request("reviews", path)
 
 
 @app.post("/reviews/{path:path}")
-async def reviews_proxy_post(path: str, data: Dict[str, Any]):
-    """Proxy POST requests to reviews service."""
+async def reviews_proxy_post(path: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Proxy POST requests to reviews service.
+    
+    Args:
+        path: The path to proxy the request to.
+        data: The data to send in the POST request.
+
+    Returns:
+        Dict[str, Any]: The response from the reviews service.
+    """
     return await proxy_request("reviews", path, method="POST", data=data)
 
 
 @app.get("/notifications/{path:path}")
-async def notifications_proxy(path: str):
-    """Proxy requests to notifications service."""
+async def notifications_proxy(path: str) -> Dict[str, Any]:
+    """
+    Proxy requests to notifications service.
+    
+    Args:
+        path: The path to proxy the request to.
+
+    Returns:
+        Dict[str, Any]: The response from the notifications service.
+    """
     return await proxy_request("notifications", path)
 
 
 @app.post("/notifications/{path:path}")
-async def notifications_proxy_post(path: str, data: Dict[str, Any]):
-    """Proxy POST requests to notifications service."""
+async def notifications_proxy_post(path: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Proxy POST requests to notifications service.
+    
+    Args:
+        path: The path to proxy the request to.
+        data: The data to send in the POST request.
+
+    Returns:
+        Dict[str, Any]: The response from the notifications service.
+    """
     return await proxy_request("notifications", path, method="POST", data=data)
 
 
-async def proxy_request(service_name: str, path: str, method: str = "GET", data: Dict[str, Any] = None):
-    """Proxy request to microservice."""
+async def proxy_request(service_name: str, path: str, method: str = "GET", data: Dict[str, Any] = None) -> Dict[str, Any]:
+    """
+    Proxy request to microservice.
+    
+    Args:
+        service_name: The name of the service to proxy the request to.
+        path: The path to proxy the request to.
+        method: The HTTP method to use for the request.
+        data: The data to send in the request.
+
+    Returns:
+        Dict[str, Any]: The response from the microservice.
+    """
     if service_name not in SERVICES:
         raise HTTPException(status_code=404, detail=f"Service {service_name} not found")
     

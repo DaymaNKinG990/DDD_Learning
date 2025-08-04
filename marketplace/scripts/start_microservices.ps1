@@ -112,7 +112,7 @@ for ($i = 0; $i -lt $services.Length; $i++) {
         } catch {
             if ($attempt -eq 30) {
                 Write-Host "❌ $service failed to start properly" -ForegroundColor Red
-                Write-Host "📋 Logs for $service:" -ForegroundColor Yellow
+                Write-Host "📋 Logs for $service" -ForegroundColor Yellow
                 docker-compose -f docker-compose.microservices.yml logs --tail=20 $service
             } else {
                 Write-Host "⏳ Waiting for $service... (attempt $attempt of 30)" -ForegroundColor Yellow

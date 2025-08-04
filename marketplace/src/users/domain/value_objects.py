@@ -142,6 +142,52 @@ class Email(ValueObject):
 
 
 @dataclass(frozen=True)
+class Username(ValueObject):
+    """
+    Username value object.
+    
+    Attributes:
+        value: The value of the username.
+    """
+
+    value: str
+
+    def __post_init__(self) -> None:
+        """
+        Validate username format after initialization.
+        
+        Raises:
+            ValueError: If the username is empty or invalid.
+        """
+        if not self.value or not self.value.strip():
+            raise ValueError("Username cannot be empty")
+        if len(self.value.strip()) < 3:
+            raise ValueError("Username must be at least 3 characters long")
+        if len(self.value.strip()) > 30:
+            raise ValueError("Username must be at most 30 characters long")
+        # Normalize username to lowercase and remove extra spaces
+        object.__setattr__(self, "value", self.value.lower().strip())
+
+    def __hash__(self) -> int:
+        """
+        Hash the username.
+        
+        Returns:
+            int: The hash of the username.
+        """
+        return hash(self.value)
+
+    def __str__(self) -> str:
+        """
+        Get the string representation of the username.
+        
+        Returns:
+            str: The string representation of the username.
+        """
+        return self.value
+
+
+@dataclass(frozen=True)
 class PhoneNumber(ValueObject):
     """
     Phone number value object.

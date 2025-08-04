@@ -68,15 +68,15 @@ class ShipmentRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_by_order_id(self, order_id: str) -> Optional[Shipment]:
+    async def get_by_order_id(self, order_id: str) -> List[Shipment]:
         """
-        Get shipment by order ID.
+        Get shipments by order ID.
         
         Args:
             order_id: The ID of the order.
 
         Returns:
-            Optional[Shipment]: The shipment.
+            List[Shipment]: The shipments.
         """
         pass
 

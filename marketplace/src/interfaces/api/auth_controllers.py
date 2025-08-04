@@ -4,7 +4,7 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Local imports
@@ -31,6 +31,13 @@ class LoginRequest(BaseModel):
 
     email: str
     password: str
+
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v):
+        if not v or '@' not in v or '.' not in v:
+            raise ValueError('Invalid email format')
+        return v
 
 
 class TokenResponse(BaseModel):
@@ -154,37 +161,39 @@ async def login(
 ) -> TokenResponse:
     """
     Authenticate user and return token pair.
-
-    Args:
-        request (LoginRequest): The login request.
-        http_request (Request): The HTTP request.
-        auth_service (AuthenticationService): The authentication service.
-
-    Returns:
-        TokenResponse: The token response.
     """
+    # Get client IP and user agent
+    client_ip = http_request.client.host if http_request.client else "unknown"
+    user_agent = http_request.headers.get("user-agent", "unknown")
+
     try:
-        # Get client IP and user agent
-        client_ip = http_request.client.host if http_request.client else "unknown"
-        user_agent = http_request.headers.get("user-agent", "unknown")
-        
         token_pair = await auth_service.login(
             email=request.email,
             password=request.password,
             ip_address=client_ip,
             user_agent=user_agent,
         )
-        
-        return TokenResponse(
-            access_token=token_pair.access_token.value,
-            refresh_token=token_pair.refresh_token.value,
-            expires_in=settings.access_token_expire_minutes * 60,  # Convert to seconds
-        )
-    except Exception as e:
+    except ValueError as e:
+        # Validation errors from ValueObjects
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(e),
         )
+    except Exception as e:
+        # Если это ошибка аутентификации — 401, иначе пробрасываем дальше
+        from src.shared.domain.exceptions import AuthenticationError
+        if isinstance(e, AuthenticationError):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=str(e),
+            )
+        raise
+
+    return TokenResponse(
+        access_token=token_pair.access_token.value,
+        refresh_token=token_pair.refresh_token.value,
+        expires_in=settings.access_token_expire_minutes * 60,  # Convert to seconds
+    )
 
 
 @router.post("/refresh", response_model=TokenResponse, status_code=status.HTTP_200_OK)
@@ -194,27 +203,23 @@ async def refresh_token(
 ) -> TokenResponse:
     """
     Refresh access token using refresh token.
-
-    Args:
-        request (RefreshTokenRequest): The refresh token request.
-        auth_service (AuthenticationService): The authentication service.
-
-    Returns:
-        TokenResponse: The token response.
     """
     try:
         token_pair = await auth_service.refresh_token(request.refresh_token)
-        
-        return TokenResponse(
-            access_token=token_pair.access_token.value,
-            refresh_token=token_pair.refresh_token.value,
-            expires_in=settings.access_token_expire_minutes * 60,
-        )
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e),
-        )
+        from src.shared.domain.exceptions import AuthenticationError
+        if isinstance(e, AuthenticationError):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=str(e),
+            )
+        raise
+
+    return TokenResponse(
+        access_token=token_pair.access_token.value,
+        refresh_token=token_pair.refresh_token.value,
+        expires_in=settings.access_token_expire_minutes * 60,
+    )
 
 
 @router.post("/logout", status_code=status.HTTP_200_OK)
@@ -225,29 +230,23 @@ async def logout(
 ) -> dict[str, str]:
     """
     Logout user by revoking current token.
-
-    Args:
-        current_user (dict): The current user.
-        auth_service (AuthenticationService): The authentication service.
-        credentials (HTTPAuthorizationCredentials): The authorization credentials.
-
-    Returns:
-        dict[str, str]: The logout response.
     """
     try:
         success = await auth_service.logout(credentials.credentials)
         if success:
             return {"message": "Successfully logged out"}
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Failed to logout",
-            )
-    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
+            detail="Failed to logout",
         )
+    except Exception as e:
+        from src.shared.domain.exceptions import AuthenticationError
+        if isinstance(e, AuthenticationError):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=str(e),
+            )
+        raise
 
 @router.post("/logout-all", status_code=status.HTTP_200_OK)
 async def logout_all_sessions(
@@ -256,28 +255,23 @@ async def logout_all_sessions(
 ) -> dict[str, str]:
     """
     Logout user from all sessions.
-
-    Args:
-        current_user (dict): The current user.
-        auth_service (AuthenticationService): The authentication service.
-
-    Returns:
-        dict[str, str]: The logout response.
     """
     try:
         success = await auth_service.logout_all_sessions(current_user["id"])
         if success:
             return {"message": "Successfully logged out from all sessions"}
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Failed to logout from all sessions",
-            )
-    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
+            detail="Failed to logout from all sessions",
         )
+    except Exception as e:
+        from src.shared.domain.exceptions import AuthenticationError
+        if isinstance(e, AuthenticationError):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=str(e),
+            )
+        raise
 
 @router.post("/change-password", status_code=status.HTTP_200_OK)
 async def change_password(
@@ -285,15 +279,8 @@ async def change_password(
     current_user: dict = Depends(get_current_user),
     auth_service: AuthenticationService = Depends(get_auth_service),
 ) -> dict[str, str]:
-    """Change user password.
-
-    Args:
-        request (ChangePasswordRequest): The change password request.
-        current_user (dict): The current user.
-        auth_service (AuthenticationService): The authentication service.
-
-    Returns:
-        dict[str, str]: The change password response.
+    """
+    Change user password.
     """
     try:
         success = await auth_service.change_password(
@@ -303,16 +290,18 @@ async def change_password(
         )
         if success:
             return {"message": "Password changed successfully"}
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Failed to change password",
-            )
-    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
+            detail="Failed to change password",
         )
+    except Exception as e:
+        from src.shared.domain.exceptions import AuthenticationError
+        if isinstance(e, AuthenticationError):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=str(e),
+            )
+        raise
 
 
 @router.get("/me", response_model=UserInfoResponse, status_code=status.HTTP_200_OK)
@@ -336,7 +325,7 @@ async def get_current_user_info(
     )
 
 
-@router.post("/validate", status_code=status.HTTP_200_OK)
+@router.get("/validate", status_code=status.HTTP_200_OK)
 async def validate_token(
     current_user: dict = Depends(get_current_user),
 ) -> dict[str, bool | str]:

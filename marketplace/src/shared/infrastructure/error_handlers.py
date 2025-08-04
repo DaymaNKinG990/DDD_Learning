@@ -263,17 +263,20 @@ class ErrorHandler:
                 message=exc.detail,
                 code="UNAUTHORIZED"
             )
+            content = error_response.model_dump()
         elif exc.status_code == status.HTTP_403_FORBIDDEN:
             error_response = AuthorizationErrorResponse(
                 message=exc.detail
             )
+            content = error_response.model_dump()
         elif exc.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
             error_response = RateLimitErrorResponse(
                 message=exc.detail
             )
+            content = error_response.model_dump()
         else:
             # Generic error response
-            error_response = {
+            content = {
                 "error": "HTTP error",
                 "message": exc.detail,
                 "status_code": exc.status_code
@@ -281,7 +284,7 @@ class ErrorHandler:
         
         return JSONResponse(
             status_code=exc.status_code,
-            content=error_response.model_dump() if hasattr(error_response, 'model_dump') else error_response
+            content=content
         )
     
     async def _handle_general_exception(self, request: Request, exc: Exception) -> JSONResponse:
@@ -312,7 +315,7 @@ class ErrorHandler:
         
         # Create response
         error_response = ServerErrorResponse(
-            message="An unexpected error occurred",
+            message=str(exc),
             request_id=request_id
         )
         
@@ -524,6 +527,7 @@ class ErrorContext:
     
     Attributes:
         logger: The logger for the error context.
+        logger_name: The name of the logger.
         context: The context of the error.
     """
     
@@ -535,6 +539,7 @@ class ErrorContext:
             logger_name: The name of the logger.
         """
         self.logger = get_logger(logger_name)
+        self.logger_name = logger_name
         self.context: Dict[str, Any] = {}
     
     def __enter__(self) -> "ErrorContext":
@@ -740,4 +745,80 @@ def retry_on_error(max_retries: int = 3, delay: float = 1.0, backoff: float = 2.
         else:
             return sync_wrapper
     
-    return decorator 
+    return decorator
+
+
+def handle_validation_error(exc: ValidationError) -> Dict[str, Any]:
+    """
+    Handle validation errors and return formatted error response.
+    
+    Args:
+        exc: The validation error.
+        
+    Returns:
+        Dict containing formatted validation error response.
+    """
+    errors = format_validation_errors(exc.errors())
+    
+    return {
+        "error": "Validation Error",
+        "message": "The provided data is invalid",
+        "details": errors,
+        "status_code": 422
+    }
+
+
+def handle_not_found_error(exc: EntityNotFoundError) -> Dict[str, Any]:
+    """
+    Handle not found errors and return formatted error response.
+    
+    Args:
+        exc: The entity not found error.
+        
+    Returns:
+        Dict containing formatted not found error response.
+    """
+    return {
+        "error": "Not Found",
+        "message": str(exc),
+        "entity_type": getattr(exc, 'entity_type', None),
+        "entity_id": getattr(exc, 'entity_id', None),
+        "status_code": 404
+    }
+
+
+def handle_database_error(exc: DatabaseError) -> Dict[str, Any]:
+    """
+    Handle database errors and return formatted error response.
+    
+    Args:
+        exc: The database error.
+        
+    Returns:
+        Dict containing formatted database error response.
+    """
+    return {
+        "error": "Database Error",
+        "message": str(exc),
+        "operation": getattr(exc, 'operation', None),
+        "table": getattr(exc, 'table', None),
+        "status_code": 500
+    }
+
+
+def handle_external_service_error(exc: ExternalServiceError) -> Dict[str, Any]:
+    """
+    Handle external service errors and return formatted error response.
+    
+    Args:
+        exc: The external service error.
+        
+    Returns:
+        Dict containing formatted external service error response.
+    """
+    return {
+        "error": "External Service Error",
+        "message": str(exc),
+        "service": getattr(exc, 'service', None),
+        "status_code": getattr(exc, 'status_code', 500)
+    }

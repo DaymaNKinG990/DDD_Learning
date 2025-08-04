@@ -60,6 +60,7 @@ class ServiceClient:
         """
         if self._client:
             await self._client.aclose()
+            self._client = None
     
     async def get(self, path: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
@@ -78,8 +79,8 @@ class ServiceClient:
         try:
             self.logger.info(f"GET {path}", extra={"path": path, "params": params})
             response = await self._client.get(path, params=params)
-            response.raise_for_status()
-            return response.json()
+            await response.raise_for_status()
+            return await response.json()
         except httpx.HTTPStatusError as e:
             self.logger.error(f"HTTP error: {e.response.status_code}", extra={"status_code": e.response.status_code})
             raise ExternalServiceError(
@@ -112,8 +113,8 @@ class ServiceClient:
         try:
             self.logger.info(f"POST {path}", extra={"path": path, "data": data})
             response = await self._client.post(path, json=data)
-            response.raise_for_status()
-            return response.json()
+            await response.raise_for_status()
+            return await response.json()
         except httpx.HTTPStatusError as e:
             self.logger.error(f"HTTP error: {e.response.status_code}", extra={"status_code": e.response.status_code})
             raise ExternalServiceError(
@@ -146,8 +147,8 @@ class ServiceClient:
         try:
             self.logger.info(f"PUT {path}", extra={"path": path, "data": data})
             response = await self._client.put(path, json=data)
-            response.raise_for_status()
-            return response.json()
+            await response.raise_for_status()
+            return await response.json()
         except httpx.HTTPStatusError as e:
             self.logger.error(f"HTTP error: {e.response.status_code}", extra={"status_code": e.response.status_code})
             raise ExternalServiceError(
@@ -179,8 +180,8 @@ class ServiceClient:
         try:
             self.logger.info(f"DELETE {path}", extra={"path": path})
             response = await self._client.delete(path)
-            response.raise_for_status()
-            return response.json()
+            await response.raise_for_status()
+            return await response.json()
         except httpx.HTTPStatusError as e:
             self.logger.error(f"HTTP error: {e.response.status_code}", extra={"status_code": e.response.status_code})
             raise ExternalServiceError(

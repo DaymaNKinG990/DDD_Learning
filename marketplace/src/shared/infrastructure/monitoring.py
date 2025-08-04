@@ -155,10 +155,17 @@ def track_request_metrics(func: Callable) -> Callable:
             raise
         finally:
             duration = time.time() - start_time
-            http_request_duration_seconds.labels(
-                method="POST",  # Default, should be extracted from request
-                endpoint=func.__name__
-            ).observe(duration)
+            
+            # Extract request info from first argument (should be Request object)
+            method = "GET"
+            endpoint = func.__name__
+            if args and hasattr(args[0], 'method') and hasattr(args[0], 'url'):
+                method = args[0].method
+                endpoint = args[0].url.path
+            
+            # Track request metrics
+            http_requests_total.labels(method=method, endpoint=endpoint, status=status).inc()
+            http_request_duration_seconds.labels(method=method, endpoint=endpoint).observe(duration)
     
     return wrapper
 
@@ -207,10 +214,43 @@ def track_business_metrics(metric_name: str, labels: dict = None) -> Callable:
                 elif metric_name == "reviews_created":
                     rating = kwargs.get('rating', 'unknown')
                     reviews_created_total.labels(rating=str(rating)).inc()
+                else:
+                    # Use the provided labels for custom metrics
+                    if labels:
+                        # Create a dynamic counter for custom metrics
+                        custom_counter = Counter(
+                            f'{metric_name}_total',
+                            f'Total number of {metric_name}',
+                            list(labels.keys()),
+                            registry=registry
+                        )
+                        custom_counter.labels(**labels).inc()
                 
                 return result
             except Exception as e:
                 errors_total.labels(service=func.__module__, error_type=type(e).__name__).inc()
+                # Also increment the business metric for failed operations
+                if metric_name == "orders_created":
+                    orders_created_total.labels(status="failed").inc()
+                elif metric_name == "products_viewed":
+                    product_id = kwargs.get('product_id', 'unknown')
+                    products_viewed_total.labels(product_id=product_id).inc()
+                elif metric_name == "users_registered":
+                    users_registered_total.inc()
+                elif metric_name == "reviews_created":
+                    rating = kwargs.get('rating', 'unknown')
+                    reviews_created_total.labels(rating=str(rating)).inc()
+                else:
+                    # Use the provided labels for custom metrics
+                    if labels:
+                        # Create a dynamic counter for custom metrics
+                        custom_counter = Counter(
+                            f'{metric_name}_total',
+                            f'Total number of {metric_name}',
+                            list(labels.keys()),
+                            registry=registry
+                        )
+                        custom_counter.labels(**labels).inc()
                 raise
         
         return wrapper
@@ -251,9 +291,12 @@ def track_performance(service: str, operation: str) -> Callable:
             try:
                 result = await func(*args, **kwargs)
                 return result
+            except Exception as e:
+                errors_total.labels(service=service, error_type=type(e).__name__).inc()
+                raise
             finally:
                 duration = time.time() - start_time
-                service_response_time.labels(service=service, operation=operation).observe(duration)
+                http_request_duration_seconds.labels(method="", endpoint=f"{service}_{operation}").observe(duration)
         
         return wrapper
     return decorator
@@ -371,3 +414,20 @@ class MetricsMiddleware:
         finally:
             duration = time.time() - start_time
             http_request_duration_seconds.labels(method=method, endpoint=path).observe(duration) 
+
+
+class MetricsCollector:
+    """
+    Metrics collector for application monitoring (stub).
+    """
+    def __init__(self):
+        self.metrics = {}
+
+    def increment(self, name: str, value: int = 1):
+        self.metrics[name] = self.metrics.get(name, 0) + value
+
+    def get(self, name: str):
+        return self.metrics.get(name, 0)
+
+    def reset(self):
+        self.metrics.clear() 

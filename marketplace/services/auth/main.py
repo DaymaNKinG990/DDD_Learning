@@ -1,9 +1,13 @@
 """Authentication microservice main application."""
 
-from datetime import datetime
+# Python imports
+from contextlib import asynccontextmanager
+from datetime import UTC, datetime
+from typing import Any, Generator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+# Local imports
 from src.auth.application.services import AuthenticationService
 from src.auth.infrastructure.sql_repositories import SQLTokenRepository, SQLSessionRepository
 from src.interfaces.api.auth_controllers import router as auth_router
@@ -17,6 +21,24 @@ from src.shared.infrastructure.middleware import (
 from src.shared.infrastructure.error_handlers import ErrorHandler
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> Generator[None, None, None]:
+    """
+    Lifespan event handler for database initialization and cleanup.
+    
+    Args:
+        app: The FastAPI app.
+
+    Returns:
+        Generator[None, None, None]: A generator that yields None.
+    """
+    # Startup
+    await init_db()
+    yield
+    # Shutdown
+    await close_db()
+
+
 # Create FastAPI app
 app = FastAPI(
     title="Authentication Service",
@@ -24,6 +46,7 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # Add CORS middleware
@@ -47,22 +70,18 @@ app.add_middleware(CacheMiddleware)
 # Include routers
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 
-# Database events
-@app.on_event("startup")
-async def startup_event():
-    """Initialize database on startup."""
-    await init_db()
 
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Close database on shutdown."""
-    await close_db()
 
 
 @app.get("/")
-async def root():
-    """Root endpoint."""
+async def root() -> dict[str, Any]:
+    """
+    Root endpoint.
+    
+    Returns:
+        dict[str, Any]: The root endpoint response.
+    """
     return {
         "message": "Authentication Service",
         "version": "1.0.0",
@@ -77,12 +96,17 @@ async def root():
 
 
 @app.get("/health")
-async def health_check():
-    """Health check endpoint."""
+async def health_check() -> dict[str, Any]:
+    """
+    Health check endpoint.
+    
+    Returns:
+        dict[str, Any]: The health check endpoint response.
+    """
     return {
         "status": "healthy",
         "service": "auth",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "version": "1.0.0"
     }
 

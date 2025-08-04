@@ -326,6 +326,117 @@ def get_request_logger(request_id: str, user_id: Optional[str] = None) -> Reques
     return RequestLogger(request_id, user_id)
 
 
+def configure_file_handler(
+    filename: str,
+    max_bytes: int = 10485760,
+    backup_count: int = 5,
+    formatter: str = "detailed"
+) -> logging.handlers.RotatingFileHandler:
+    """
+    Configure a file handler for logging.
+
+    Args:
+        filename: The log file name.
+        max_bytes: Maximum file size in bytes.
+        backup_count: Number of backup files to keep.
+        formatter: The formatter to use.
+
+    Returns:
+        RotatingFileHandler: The configured file handler.
+    """
+    from logging.handlers import RotatingFileHandler
+    
+    # Ensure logs directory exists
+    log_path = Path(filename)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    handler = RotatingFileHandler(
+        filename=filename,
+        maxBytes=max_bytes,
+        backupCount=backup_count
+    )
+    
+    # Get formatter from config
+    formatter_config = LogConfig().formatters.get(formatter, LogConfig().formatters["default"])
+    formatter_obj = logging.Formatter(
+        formatter_config["format"],
+        formatter_config["datefmt"]
+    )
+    handler.setFormatter(formatter_obj)
+    
+    return handler
+
+
+def configure_console_handler(
+    formatter: str = "default",
+    stream: str = "ext://sys.stderr"
+) -> logging.StreamHandler:
+    """
+    Configure a console handler for logging.
+    
+    Args:
+        formatter: Name of the formatter to use
+        stream: Stream to use (sys.stdout or sys.stderr)
+        
+    Returns:
+        Configured StreamHandler
+    """
+    handler = logging.StreamHandler()
+    
+    formatter_config = LogConfig().formatters.get(formatter, LogConfig().formatters["default"])
+    formatter_obj = logging.Formatter(
+        formatter_config["format"],
+        formatter_config["datefmt"]
+    )
+    handler.setFormatter(formatter_obj)
+    
+    return handler
+
+
+def setup_log_rotation(
+    filename: str,
+    max_bytes: int = 10485760,
+    backup_count: int = 5,
+    rotation_when: str = "midnight"
+) -> None:
+    """
+    Setup log rotation for a file.
+    
+    Args:
+        filename: Path to the log file
+        max_bytes: Maximum file size before rotation
+        backup_count: Number of backup files to keep
+        rotation_when: When to rotate logs (midnight, daily, etc.)
+    """
+    from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
+    
+    log_path = Path(filename)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    if rotation_when in ["midnight", "daily", "hourly"]:
+        handler = TimedRotatingFileHandler(
+            filename=filename,
+            when=rotation_when,
+            backupCount=backup_count
+        )
+    else:
+        handler = RotatingFileHandler(
+            filename=filename,
+            maxBytes=max_bytes,
+            backupCount=backup_count
+        )
+    
+    formatter_config = LogConfig().formatters.get("detailed", LogConfig().formatters["default"])
+    formatter_obj = logging.Formatter(
+        formatter_config["format"],
+        formatter_config["datefmt"]
+    )
+    handler.setFormatter(formatter_obj)
+    
+    logger = logging.getLogger("marketplace")
+    logger.addHandler(handler)
+
+
 # Performance logging decorator
 def log_performance(logger_name: str = "marketplace") -> Callable:
     """

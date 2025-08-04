@@ -41,12 +41,15 @@ class BaseRepository(ABC, Generic[T]):
         pass
 
     @abstractmethod
-    async def delete(self, entity_id: Any) -> None:
+    async def delete(self, entity_id: Any) -> bool:
         """
         Delete entity.
         
         Args:
             entity_id: The ID of the entity.
+            
+        Returns:
+            bool: True if the entity was deleted, False otherwise.
         """
         pass
 
@@ -100,14 +103,21 @@ class InMemoryRepository(BaseRepository[T]):
         """
         return self._storage.get(str(entity_id))
 
-    async def delete(self, entity_id: Any) -> None:
+    async def delete(self, entity_id: Any) -> bool:
         """
         Delete entity from memory.
         
         Args:
             entity_id: The ID of the entity.
+            
+        Returns:
+            bool: True if the entity was deleted, False otherwise.
         """
-        self._storage.pop(str(entity_id), None)
+        entity_id_str = str(entity_id)
+        if entity_id_str in self._storage:
+            self._storage.pop(entity_id_str)
+            return True
+        return False
 
     async def list_all(self) -> List[T]:
         """

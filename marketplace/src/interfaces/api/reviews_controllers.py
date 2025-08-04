@@ -100,6 +100,21 @@ class RejectReviewRequest(BaseModel):
     reason: str
 
 
+class UpdateReviewRequest(BaseModel):
+    """
+    Request model for updating a review.
+
+    Attributes:
+        title (Optional[str]): The title of the review.
+        content (Optional[str]): The content of the review.
+        rating (Optional[int]): The rating of the review.
+    """
+
+    title: Optional[str] = None
+    content: Optional[str] = None
+    rating: Optional[int] = None
+
+
 class AddResponseRequest(BaseModel):
     """
     Request model for adding a response to a review.

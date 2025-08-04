@@ -1,9 +1,13 @@
 """Users microservice main application."""
 
-from datetime import datetime
+# Python imports
+from contextlib import asynccontextmanager
+from datetime import UTC, datetime
+from typing import Any
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+# Local imports
 from src.users.application.services import UserService
 from src.users.infrastructure.repositories import InMemoryUserRepository, InMemoryCustomerRepository, InMemorySellerRepository
 from src.interfaces.api.users_controllers import router as users_router
@@ -17,6 +21,16 @@ from src.shared.infrastructure.middleware import (
 from src.shared.infrastructure.error_handlers import ErrorHandler
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan event handler for database initialization and cleanup."""
+    # Startup
+    await init_db()
+    yield
+    # Shutdown
+    await close_db()
+
+
 # Create FastAPI app
 app = FastAPI(
     title="Users Service",
@@ -24,6 +38,7 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # Add CORS middleware
@@ -47,22 +62,15 @@ app.add_middleware(CacheMiddleware)
 # Include routers
 app.include_router(users_router, prefix="/users", tags=["users"])
 
-# Database events
-@app.on_event("startup")
-async def startup_event():
-    """Initialize database on startup."""
-    await init_db()
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Close database on shutdown."""
-    await close_db()
-
 
 @app.get("/")
-async def root():
-    """Root endpoint."""
+async def root() -> dict[str, Any]:
+    """
+    Root endpoint.
+    
+    Returns:
+        dict[str, Any]: The root endpoint response.
+    """
     return {
         "message": "Users Service",
         "version": "1.0.0",
@@ -75,12 +83,17 @@ async def root():
 
 
 @app.get("/health")
-async def health_check():
-    """Health check endpoint."""
+async def health_check() -> dict[str, Any]:
+    """
+    Health check endpoint.
+    
+    Returns:
+        dict[str, Any]: The health check endpoint response.
+    """
     return {
         "status": "healthy",
         "service": "users",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "version": "1.0.0"
     }
 

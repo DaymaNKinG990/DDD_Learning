@@ -14,10 +14,11 @@ from ..domain.value_objects import (
     ShippingMethod,
     ShippingProviderId,
     ShippingStatus,
+    TrackingNumber,
 )
 
 
-class InMemoryShipmentRepository(InMemoryRepository[Shipment, ShippingId], ShipmentRepository):
+class InMemoryShipmentRepository(InMemoryRepository[Shipment], ShipmentRepository):
     """
     In-memory implementation of ShipmentRepository.
     
@@ -64,7 +65,7 @@ class InMemoryShipmentRepository(InMemoryRepository[Shipment, ShippingId], Shipm
 
         return saved_shipment
 
-    async def get_by_order_id(self, order_id: OrderId) -> List[Shipment]:
+    async def get_by_order_id(self, order_id: str) -> List[Shipment]:
         """
         Get shipments by order ID.
         
@@ -74,7 +75,9 @@ class InMemoryShipmentRepository(InMemoryRepository[Shipment, ShippingId], Shipm
         Returns:
             List[Shipment]: The shipments.
         """
-        return self._shipments_by_order_id.get(str(order_id), [])
+        # Convert OrderId to string if it's an OrderId object
+        order_id_str = str(order_id)
+        return self._shipments_by_order_id.get(order_id_str, [])
 
     async def get_by_status(self, status: ShippingStatus) -> List[Shipment]:
         """
@@ -88,7 +91,7 @@ class InMemoryShipmentRepository(InMemoryRepository[Shipment, ShippingId], Shipm
         """
         return self._shipments_by_status.get(status, [])
 
-    async def get_by_tracking_number(self, tracking_number: str) -> Optional[Shipment]:
+    async def get_by_tracking_number(self, tracking_number: TrackingNumber) -> Optional[Shipment]:
         """
         Get shipment by tracking number.
         
@@ -98,7 +101,16 @@ class InMemoryShipmentRepository(InMemoryRepository[Shipment, ShippingId], Shipm
         Returns:
             Optional[Shipment]: The shipment.
         """
-        return self._shipments_by_tracking_number.get(tracking_number)
+        return self._shipments_by_tracking_number.get(str(tracking_number))
+
+    async def get_all(self) -> List[Shipment]:
+        """
+        Get all shipments.
+        
+        Returns:
+            List[Shipment]: The shipments.
+        """
+        return list(self._storage.values())
 
     async def delete(self, shipment_id: ShippingId) -> bool:
         """
@@ -135,13 +147,14 @@ class InMemoryShipmentRepository(InMemoryRepository[Shipment, ShippingId], Shipm
         return False
 
 
-class InMemoryShippingProviderRepository(InMemoryRepository[ShippingProvider, ShippingProviderId], ShippingProviderRepository):
+class InMemoryShippingProviderRepository(InMemoryRepository[ShippingProvider], ShippingProviderRepository):
     """
     In-memory implementation of ShippingProviderRepository.
     
     Attributes:
         _providers_by_method: A dictionary mapping shipping methods to shipping providers.
         _active_providers: A list of active shipping providers.
+        _providers_by_code: A dictionary mapping codes to shipping providers.
     """
 
     def __init__(self) -> None:
@@ -149,6 +162,7 @@ class InMemoryShippingProviderRepository(InMemoryRepository[ShippingProvider, Sh
         super().__init__()
         self._providers_by_method: Dict[ShippingMethod, List[ShippingProvider]] = {}
         self._active_providers: List[ShippingProvider] = []
+        self._providers_by_code: Dict[str, ShippingProvider] = {}
 
     async def save(self, provider: ShippingProvider) -> ShippingProvider:
         """
@@ -174,16 +188,42 @@ class InMemoryShippingProviderRepository(InMemoryRepository[ShippingProvider, Sh
         elif not provider.is_active and provider in self._active_providers:
             self._active_providers.remove(provider)
 
+        self._providers_by_code[provider.code] = provider
+
         return saved_provider
 
-    async def get_all(self) -> List[ShippingProvider]:
+    async def get_by_id(self, provider_id: str) -> Optional[ShippingProvider]:
         """
-        Get all shipping providers.
+        Get shipping provider by ID.
+        
+        Args:
+            provider_id: The ID of the shipping provider.
+
+        Returns:
+            Optional[ShippingProvider]: The shipping provider.
+        """
+        return await super().get_by_id(provider_id)
+
+    async def get_by_code(self, code: str) -> Optional[ShippingProvider]:
+        """
+        Get shipping provider by code.
+        
+        Args:
+            code: The code of the shipping provider.
+
+        Returns:
+            Optional[ShippingProvider]: The shipping provider.
+        """
+        return self._providers_by_code.get(code)
+
+    async def get_active_providers(self) -> List[ShippingProvider]:
+        """
+        Get active shipping providers.
         
         Returns:
-            List[ShippingProvider]: The shipping providers.
+            List[ShippingProvider]: The active shipping providers.
         """
-        return list(self._storage.values())
+        return self._active_providers.copy()
 
     async def get_active(self) -> List[ShippingProvider]:
         """
@@ -193,6 +233,15 @@ class InMemoryShippingProviderRepository(InMemoryRepository[ShippingProvider, Sh
             List[ShippingProvider]: The active shipping providers.
         """
         return self._active_providers.copy()
+
+    async def get_all(self) -> List[ShippingProvider]:
+        """
+        Get all shipping providers.
+        
+        Returns:
+            List[ShippingProvider]: The shipping providers.
+        """
+        return list(self._storage.values())
 
     async def get_providers_by_method(self, method: ShippingMethod) -> List[ShippingProvider]:
         """
@@ -206,7 +255,7 @@ class InMemoryShippingProviderRepository(InMemoryRepository[ShippingProvider, Sh
         """
         return self._providers_by_method.get(method, [])
 
-    async def delete(self, provider_id: ShippingProviderId) -> bool:
+    async def delete(self, provider_id: str) -> bool:
         """
         Delete shipping provider by ID.
         
@@ -228,6 +277,9 @@ class InMemoryShippingProviderRepository(InMemoryRepository[ShippingProvider, Sh
 
             if provider in self._active_providers:
                 self._active_providers.remove(provider)
+
+            if provider.code in self._providers_by_code:
+                self._providers_by_code.pop(provider.code)
 
             return await super().delete(provider_id)
         return False

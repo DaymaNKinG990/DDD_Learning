@@ -73,6 +73,18 @@ class UpdateUserRequest(BaseModel):
     phone_number: Optional[str] = None
 
 
+class AuthenticateUserRequest(BaseModel):
+    """Request model for authenticating a user.
+
+    Attributes:
+        email (str): The email of the user.
+        password (str): The password of the user.
+    """
+
+    email: str
+    password: str
+
+
 class CreateCustomerRequest(BaseModel):
     """Request model for creating a customer.
 

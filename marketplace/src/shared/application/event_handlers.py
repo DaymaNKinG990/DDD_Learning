@@ -46,31 +46,31 @@ class NotificationEventHandler(EventHandler):
 
         # Map event types to notification templates
         notification_mapping = {
-            "OrderCreated": {
+            "OrderCreatedEvent": {
                 "type": "order_confirmation",
                 "subject": "Order Confirmation",
                 "template": "order_created.html",
                 "recipient_field": "customer_id"
             },
-            "OrderConfirmed": {
+            "OrderConfirmedEvent": {
                 "type": "order_status_update",
                 "subject": "Order Confirmed",
                 "template": "order_confirmed.html",
                 "recipient_field": "customer_id"
             },
-            "OrderShipped": {
+            "OrderShippedEvent": {
                 "type": "order_status_update",
                 "subject": "Order Shipped",
                 "template": "order_shipped.html",
                 "recipient_field": "customer_id"
             },
-            "UserCreated": {
+            "UserCreatedEvent": {
                 "type": "welcome",
                 "subject": "Welcome to Marketplace",
                 "template": "welcome_user.html",
                 "recipient_field": "user_id"
             },
-            "SellerVerified": {
+            "SellerVerifiedEvent": {
                 "type": "seller_status",
                 "subject": "Seller Account Verified",
                 "template": "seller_verified.html",
@@ -80,13 +80,17 @@ class NotificationEventHandler(EventHandler):
 
         event_config = notification_mapping.get(event.event_type, {})
 
+        # For general events, try to use user_id first, then fall back to aggregate_id
+        recipient_field = event_config.get("recipient_field", "user_id")
+        recipient = event_data.get(recipient_field)
+        if not recipient and recipient_field != "aggregate_id":
+            recipient = event_data.get("aggregate_id")
+        
         return {
             "notification_type": event_config.get("type", "general"),
             "subject": event_config.get("subject", f"Event: {event.event_type}"),
             "template": event_config.get("template", "default.html"),
-            "recipient": event_data.get(
-                event_config.get("recipient_field", "aggregate_id")
-            ),
+            "recipient": recipient,
             "event_data": event_data
         }
 

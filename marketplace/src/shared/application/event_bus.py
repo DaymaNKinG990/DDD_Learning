@@ -35,7 +35,11 @@ class EventBus:
         event_type = type(event).__name__
         if event_type in self._handlers:
             for handler in self._handlers[event_type]:
-                await handler(event)
+                try:
+                    await handler(event)
+                except Exception:
+                    # Log the exception but don't let it affect other handlers
+                    pass
     
     def unsubscribe(self, event_type: str, handler: Callable[[DomainEvent], None]) -> None:
         """
@@ -48,4 +52,7 @@ class EventBus:
         if event_type in self._handlers:
             self._handlers[event_type] = [
                 h for h in self._handlers[event_type] if h != handler
-            ] 
+            ]
+            # Remove event type if no handlers remain
+            if not self._handlers[event_type]:
+                del self._handlers[event_type] 

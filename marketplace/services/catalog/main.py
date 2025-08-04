@@ -1,9 +1,13 @@
 """Catalog microservice main application."""
 
-from datetime import datetime
+# Python imports
+from contextlib import asynccontextmanager
+from datetime import UTC, datetime
+from typing import Any, Generator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+# Local imports
 from src.catalog.application.services import CatalogService
 from src.catalog.infrastructure.repositories import InMemoryProductRepository, InMemoryCategoryRepository, InMemoryBrandRepository
 from src.interfaces.api.controllers import catalog_router
@@ -17,6 +21,27 @@ from src.shared.infrastructure.middleware import (
 from src.shared.infrastructure.error_handlers import ErrorHandler
 from src.shared.infrastructure.monitoring import metrics_endpoint, update_health_status, MetricsMiddleware
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> Generator[None, None, None]:
+    """
+    Lifespan event handler for database initialization and cleanup.
+    
+    Args:
+        app: The FastAPI app.
+
+    Returns:
+        Generator[None, None, None]: A generator that yields None.
+    """
+    # Startup
+    await init_db()
+    update_health_status("catalog", True)
+    yield
+    # Shutdown
+    await close_db()
+    update_health_status("catalog", False)
+
+
 # Create FastAPI app
 app = FastAPI(
     title="Catalog Service",
@@ -24,6 +49,7 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # Add CORS middleware
@@ -51,22 +77,16 @@ app.include_router(catalog_router, prefix="/catalog", tags=["catalog"])
 # Add metrics endpoint
 app.add_api_route("/metrics", metrics_endpoint, methods=["GET"])
 
-# Database events
-@app.on_event("startup")
-async def startup_event():
-    """Initialize database on startup."""
-    await init_db()
-    update_health_status("catalog", True)
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Close database on shutdown."""
-    await close_db()
-    update_health_status("catalog", False)
 
 @app.get("/")
-async def root():
-    """Root endpoint."""
+async def root() -> dict[str, Any]:
+    """
+    Root endpoint.
+    
+    Returns:
+        dict[str, Any]: The root endpoint response.
+    """
     return {
         "message": "Catalog Service",
         "version": "1.0.0",
@@ -79,13 +99,18 @@ async def root():
     }
 
 @app.get("/health")
-async def health_check():
-    """Health check endpoint."""
+async def health_check() -> dict[str, Any]:
+    """
+    Health check endpoint.
+    
+    Returns:
+        dict[str, Any]: The health check endpoint response.
+    """
     update_health_status("catalog", True)
     return {
         "status": "healthy",
         "service": "catalog",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "version": "1.0.0"
     }
 

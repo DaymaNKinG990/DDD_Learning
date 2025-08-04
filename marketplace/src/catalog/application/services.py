@@ -2,6 +2,7 @@
 
 # Python imports
 from typing import List, Optional
+import time
 
 # Local imports
 from src.catalog.domain.entities import Brand, Category, Product
@@ -83,6 +84,7 @@ class CatalogService:
                 raise BusinessRuleViolationError(f"Brand with ID {brand_id} not found")
 
         product = Product(
+            id=ProductId(value=f"prod_{sku}_{int(time.time())}"),
             name=ProductName(value=name),
             description=ProductDescription(value=description),
             price=price,
@@ -210,6 +212,7 @@ class CatalogService:
                 raise BusinessRuleViolationError(f"Parent category with ID {parent_id} not found")
 
         category = Category(
+            id=CategoryId(value=f"cat_{name.lower().replace(' ', '_')}_{int(time.time())}"),
             name=name,
             description=description,
             parent_id=parent_id,

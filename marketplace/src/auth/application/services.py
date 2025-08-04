@@ -180,6 +180,8 @@ class AuthenticationService:
             return None
         if not self.verify_password(password, user.password_hash):
             return None
+        if not user.is_active:
+            return None
         return user
     
     async def login(
@@ -206,7 +208,6 @@ class AuthenticationService:
             # Publish failed login event
             if self.event_handler:
                 event = FailedLoginAttempt(
-                    aggregate_id=email,
                     email=email,
                     ip_address=ip_address,
                     user_agent=user_agent,
@@ -251,7 +252,6 @@ class AuthenticationService:
         # Publish login event
         if self.event_handler:
             event = UserLoggedIn(
-                aggregate_id=user.id.value,
                 user_id=user.id.value,
                 ip_address=ip_address,
                 user_agent=user_agent,
@@ -323,7 +323,6 @@ class AuthenticationService:
         # Publish logout event
         if self.event_handler:
             event = UserLoggedOut(
-                aggregate_id=token_pair.user_id.value,
                 user_id=token_pair.user_id.value,
                 session_id=token_pair.id.value,
                 timestamp=datetime.now(timezone.utc),
@@ -388,7 +387,6 @@ class AuthenticationService:
         # Publish password changed event
         if self.event_handler:
             event = PasswordChanged(
-                aggregate_id=user.id.value,
                 user_id=user.id.value,
                 timestamp=datetime.now(timezone.utc),
             )

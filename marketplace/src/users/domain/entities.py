@@ -7,7 +7,7 @@ from typing import Optional
 
 # Local imports
 from src.shared.domain.entity import Entity
-from .value_objects import CustomerId, Email, PhoneNumber, SellerId, UserId
+from .value_objects import CustomerId, Email, PhoneNumber, SellerId, UserId, Username
 
 
 @dataclass
@@ -17,6 +17,7 @@ class User(Entity[UserId]):
     
     Attributes:
         email: The email of the user.
+        username: The username of the user.
         first_name: The first name of the user.
         last_name: The last name of the user.
         phone_number: The phone number of the user.
@@ -26,6 +27,7 @@ class User(Entity[UserId]):
     """
 
     email: Email
+    username: Username
     first_name: str
     last_name: str
     phone_number: Optional[PhoneNumber] = None

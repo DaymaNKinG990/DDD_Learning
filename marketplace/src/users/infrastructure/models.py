@@ -1,7 +1,7 @@
 """SQLAlchemy models for users domain."""
 
 # Python imports
-from sqlalchemy import Boolean, Column, DateTime, String, Text
+from sqlalchemy import Boolean, Column, DateTime, String, Text, ForeignKey
 from sqlalchemy.orm import relationship
 
 # Local imports
@@ -26,6 +26,7 @@ class UserModel(Base, TimestampMixin):
     
     id = Column(String(36), primary_key=True, index=True)
     email = Column(String(255), unique=True, index=True, nullable=False)
+    username = Column(String(100), unique=True, index=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
@@ -51,7 +52,7 @@ class CustomerModel(Base, TimestampMixin):
     __tablename__ = "customers"
     
     id = Column(String(36), primary_key=True, index=True)
-    user_id = Column(String(36), nullable=False, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
     shipping_address = Column(Text, nullable=False)
     billing_address = Column(Text, nullable=False)
     
@@ -75,10 +76,11 @@ class SellerModel(Base, TimestampMixin):
     __tablename__ = "sellers"
     
     id = Column(String(36), primary_key=True, index=True)
-    user_id = Column(String(36), nullable=False, index=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
     company_name = Column(String(255), nullable=False)
+    business_address = Column(Text, nullable=False)
     company_description = Column(Text, nullable=True)
-    website = Column(String(255), nullable=True)
+    tax_id = Column(String(100), nullable=True)
     is_verified = Column(Boolean, default=False, nullable=False)
     
     # Relationships

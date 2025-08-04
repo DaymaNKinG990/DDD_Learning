@@ -17,6 +17,7 @@ from src.users.domain.value_objects import (
     PhoneNumber,
     SellerId,
     UserId,
+    Username,
 )
 
 
@@ -62,8 +63,9 @@ class UserService:
             raise BusinessRuleViolationError("User with this email already exists")
 
         user = User(
+            id=UserId(value=f"user_{email.split('@')[0]}"),
             email=email_vo,
-            password_hash=password_hash,
+            username=Username(value=email.split('@')[0]),  # Use email prefix as username
             first_name=first_name,
             last_name=last_name,
             phone_number=phone_vo,
@@ -194,9 +196,10 @@ class CustomerService:
             Customer: The created customer.
         """
         customer = Customer(
+            id=CustomerId(value=f"customer_{user_id}"),
             user_id=UserId(value=user_id),
-            shipping_address=shipping_address,
-            billing_address=billing_address,
+            shipping_addresses=[shipping_address],
+            billing_addresses=[billing_address],
         )
 
         return await self.customer_repository.save(customer)
@@ -311,10 +314,11 @@ class SellerService:
             Seller: The created seller.
         """
         seller = Seller(
+            id=SellerId(value=f"seller_{user_id}"),
             user_id=UserId(value=user_id),
             company_name=company_name,
+            business_address="Default Address",  # Default business address
             company_description=company_description,
-            website=website,
         )
 
         return await self.seller_repository.save(seller)

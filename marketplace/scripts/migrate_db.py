@@ -1,106 +1,83 @@
 #!/usr/bin/env python3
-"""Database migration script for marketplace services."""
+"""Database initialization script for marketplace services."""
 
+# Python imports
 import asyncio
 import logging
 import sys
 from pathlib import Path
 
+# Local imports
+from src.shared.infrastructure.logging import setup_logging
+from src.shared.infrastructure.database import init_db, close_db
+
+
 # Add project root to Python path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
-
-from alembic import command
-from alembic.config import Config
-from src.shared.infrastructure.config import settings
-from src.shared.infrastructure.logging import setup_logging
 
 # Setup logging
 setup_logging()
 logger = logging.getLogger(__name__)
 
 
-def run_migrations():
-    """Run database migrations using Alembic."""
+async def initialize_database() -> bool:
+    """
+    Initialize database tables.
+    
+    Returns:
+        bool: True if initialization was successful, False otherwise.
+    """
     try:
-        logger.info("Starting database migration...")
+        logger.info("Starting database initialization...")
         
-        # Create Alembic configuration
-        alembic_cfg = Config("alembic.ini")
+        # Initialize database tables
+        await init_db()
         
-        # Set database URL in config
-        alembic_cfg.set_main_option("sqlalchemy.url", settings.database.async_url)
-        
-        # Run migrations
-        command.upgrade(alembic_cfg, "head")
-        
-        logger.info("Database migration completed successfully!")
+        logger.info("Database initialization completed successfully!")
         return True
         
     except Exception as e:
-        logger.error(f"Database migration failed: {e}")
+        logger.error(f"Database initialization failed: {e}")
         return False
 
 
-def create_initial_migration():
-    """Create initial migration if none exists."""
+async def check_database() -> bool:
+    """
+    Check if database is accessible.
+    
+    Returns:
+        bool: True if database is accessible, False otherwise.
+    """
     try:
-        logger.info("Creating initial migration...")
+        logger.info("Checking database connection...")
         
-        # Create Alembic configuration
-        alembic_cfg = Config("alembic.ini")
+        # Try to initialize database (this will fail if connection is not available)
+        await init_db()
         
-        # Set database URL in config
-        alembic_cfg.set_main_option("sqlalchemy.url", settings.database.async_url)
-        
-        # Create initial migration
-        command.revision(alembic_cfg, message="Initial migration", autogenerate=True)
-        
-        logger.info("Initial migration created successfully!")
+        logger.info("Database connection check completed!")
         return True
         
     except Exception as e:
-        logger.error(f"Failed to create initial migration: {e}")
-        return False
-
-
-def check_migrations():
-    """Check if migrations are needed."""
-    try:
-        logger.info("Checking database migration status...")
-        
-        # Create Alembic configuration
-        alembic_cfg = Config("alembic.ini")
-        
-        # Set database URL in config
-        alembic_cfg.set_main_option("sqlalchemy.url", settings.database.async_url)
-        
-        # Check current revision
-        command.current(alembic_cfg)
-        
-        logger.info("Migration check completed!")
-        return True
-        
-    except Exception as e:
-        logger.error(f"Migration check failed: {e}")
+        logger.error(f"Database connection check failed: {e}")
         return False
 
 
 if __name__ == "__main__":
     import argparse
     
-    parser = argparse.ArgumentParser(description="Database migration script")
+    parser = argparse.ArgumentParser(description="Database initialization script")
     parser.add_argument(
         "--action",
-        choices=["migrate", "create", "check"],
-        default="migrate",
-        help="Action to perform (default: migrate)"
+        choices=["init", "check"],
+        default="init",
+        help="Action to perform (default: init)"
     )
     parser.add_argument(
         "--retries",
         type=int,
         default=5,
-        help="Number of retries for migration (default: 5)"
+        help="Number of retries for initialization (default: 5)"
     )
     parser.add_argument(
         "--delay",
@@ -115,12 +92,10 @@ if __name__ == "__main__":
     
     for attempt in range(args.retries):
         try:
-            if args.action == "migrate":
-                success = run_migrations()
-            elif args.action == "create":
-                success = create_initial_migration()
+            if args.action == "init":
+                success = asyncio.run(initialize_database())
             elif args.action == "check":
-                success = check_migrations()
+                success = asyncio.run(check_database())
             
             if success:
                 break
@@ -132,9 +107,15 @@ if __name__ == "__main__":
                 logger.info(f"Retrying in {args.delay} seconds...")
                 asyncio.sleep(args.delay)
     
+    # Clean up database connections
+    try:
+        asyncio.run(close_db())
+    except Exception as e:
+        logger.warning(f"Failed to close database connections: {e}")
+    
     if not success:
-        logger.error("All migration attempts failed!")
+        logger.error("All initialization attempts failed!")
         sys.exit(1)
     else:
-        logger.info("Migration completed successfully!")
+        logger.info("Database initialization completed successfully!")
         sys.exit(0) 

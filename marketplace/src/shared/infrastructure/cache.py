@@ -5,7 +5,14 @@ import json
 import pickle
 from typing import Any, AsyncGenerator, Optional, Union
 from datetime import timedelta
-import redis.asyncio as redis
+
+try:
+    import redis.asyncio as redis
+    REDIS_AVAILABLE = True
+except ImportError:
+    REDIS_AVAILABLE = False
+    redis = None
+
 from pydantic import BaseModel
 
 # Local imports
@@ -23,6 +30,9 @@ class CacheService:
     
     def __init__(self) -> None:
         """Initialize the cache service."""
+        if not REDIS_AVAILABLE:
+            raise ImportError("Redis is not available. Please install redis package.")
+            
         self.redis_client = redis.from_url(
             settings.redis.url,
             encoding="utf-8",
@@ -508,4 +518,65 @@ class CacheService:
 
 
 # Global cache instance
-cache = CacheService() 
+if REDIS_AVAILABLE:
+    cache = CacheService()
+else:
+    cache = None
+
+
+class CacheManager:
+    """
+    Cache manager for managing multiple cache instances.
+    
+    Attributes:
+        _instances: Dictionary of cache instances.
+    """
+    
+    def __init__(self) -> None:
+        """Initialize the cache manager."""
+        self._instances: dict[str, CacheService] = {}
+    
+    def get_instance(self, name: str = "default") -> CacheService:
+        """
+        Get or create a cache instance.
+        
+        Args:
+            name: The name of the cache instance.
+            
+        Returns:
+            CacheService: The cache instance.
+        """
+        if name not in self._instances:
+            self._instances[name] = CacheService()
+        return self._instances[name]
+    
+    def remove_instance(self, name: str) -> None:
+        """
+        Remove a cache instance.
+        
+        Args:
+            name: The name of the cache instance to remove.
+        """
+        if name in self._instances:
+            del self._instances[name]
+    
+    async def remove_instance_async(self, name: str) -> None:
+        """
+        Remove a cache instance asynchronously.
+        
+        Args:
+            name: The name of the cache instance to remove.
+        """
+        if name in self._instances:
+            await self._instances[name].close()
+            del self._instances[name]
+    
+    async def close_all(self) -> None:
+        """Close all cache instances."""
+        for instance in self._instances.values():
+            await instance.close()
+        self._instances.clear()
+
+
+# Global cache manager instance
+cache_manager = CacheManager() 

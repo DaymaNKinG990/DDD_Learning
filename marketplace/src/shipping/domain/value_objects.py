@@ -86,12 +86,14 @@ class ShippingMethod(Enum):
         EXPRESS: The express shipping method.
         PREMIUM: The premium shipping method.
         SAME_DAY: The same day shipping method.
+        PRIORITY: The priority shipping method.
     """
 
     STANDARD = "standard"
     EXPRESS = "express"
     PREMIUM = "premium"
     SAME_DAY = "same_day"
+    PRIORITY = "priority"
 
 
 @dataclass(frozen=True)

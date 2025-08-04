@@ -61,7 +61,7 @@ class OrderService:
 
         return await self._order_repository.save(order)
 
-    async def get_order(self, order_id: OrderId) -> Order:
+    async def get_order_by_id(self, order_id: OrderId) -> Order:
         """
         Get order by ID.
         
@@ -94,7 +94,7 @@ class OrderService:
             quantity (int): The quantity of the product.
             unit_price (Decimal): The price of the product per unit.
         """
-        order = await self.get_order(order_id)
+        order = await self.get_order_by_id(order_id)
 
         if order.status != OrderStatus.PENDING:
             raise InvalidOperationError("Can only add items to pending orders")
@@ -120,7 +120,7 @@ class OrderService:
         Returns:
             Order: The updated order.
         """
-        order = await self.get_order(order_id)
+        order = await self.get_order_by_id(order_id)
 
         if order.status != OrderStatus.PENDING:
             raise InvalidOperationError("Can only remove items from pending orders")
@@ -138,7 +138,7 @@ class OrderService:
         Returns:
             Order: The confirmed order.
         """
-        order = await self.get_order(order_id)
+        order = await self.get_order_by_id(order_id)
         confirmed_order = order.confirm()
         return await self._order_repository.save(confirmed_order)
 
@@ -152,7 +152,7 @@ class OrderService:
         Returns:
             Order: The shipped order.
         """
-        order = await self.get_order(order_id)
+        order = await self.get_order_by_id(order_id)
         shipped_order = order.ship()
         return await self._order_repository.save(shipped_order)
 
@@ -166,7 +166,7 @@ class OrderService:
         Returns:
             Order: The delivered order.
         """
-        order = await self.get_order(order_id)
+        order = await self.get_order_by_id(order_id)
         delivered_order = order.deliver()
         return await self._order_repository.save(delivered_order)
 
@@ -180,7 +180,7 @@ class OrderService:
         Returns:
             Order: The cancelled order.
         """
-        order = await self.get_order(order_id)
+        order = await self.get_order_by_id(order_id)
         cancelled_order = order.cancel()
         return await self._order_repository.save(cancelled_order)
 
@@ -194,21 +194,33 @@ class OrderService:
         Returns:
             Order: The refunded order.
         """
-        order = await self.get_order(order_id)
+        order = await self.get_order_by_id(order_id)
         refunded_order = order.refund()
         return await self._order_repository.save(refunded_order)
 
     async def get_customer_orders(self, customer_id: str) -> List[Order]:
         """
-        Get all orders for a customer.
+        Get orders by customer ID.
         
         Args:
             customer_id (str): The ID of the customer.
 
         Returns:
-            List[Order]: The orders for the customer.
+            List[Order]: The list of orders for the customer.
         """
         return await self._order_repository.get_by_customer(customer_id)
+
+    async def get_orders_by_customer(self, customer_id: str) -> List[Order]:
+        """
+        Get orders by customer ID (alias for get_customer_orders).
+        
+        Args:
+            customer_id (str): The ID of the customer.
+
+        Returns:
+            List[Order]: The list of orders for the customer.
+        """
+        return await self.get_customer_orders(customer_id)
 
     async def get_pending_orders(self) -> List[Order]:
         """

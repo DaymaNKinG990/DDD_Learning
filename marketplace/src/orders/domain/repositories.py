@@ -56,6 +56,19 @@ class OrderRepository(ABC):
         pass
 
     @abstractmethod
+    async def get_by_customer_id(self, customer_id: str) -> List[Order]:
+        """
+        Get all orders for a customer by customer ID.
+        
+        Args:
+            customer_id (str): The ID of the customer.
+
+        Returns:
+            List[Order]: The orders for the customer.
+        """
+        pass
+
+    @abstractmethod
     async def get_pending_orders(self) -> List[Order]:
         """
         Get all pending orders.
@@ -75,6 +88,20 @@ class OrderRepository(ABC):
 
         Returns:
             List[Order]: The orders with the given status.
+        """
+        pass
+
+    @abstractmethod
+    async def get_orders_by_date_range(self, start_date, end_date) -> List[Order]:
+        """
+        Get all orders within a date range.
+        
+        Args:
+            start_date: The start date for the range.
+            end_date: The end date for the range.
+
+        Returns:
+            List[Order]: The orders within the date range.
         """
         pass
 

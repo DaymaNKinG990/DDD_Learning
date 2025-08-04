@@ -81,6 +81,32 @@ class ProductRepository(ABC):
         pass
 
     @abstractmethod
+    async def get_by_seller_id(self, seller_id: str) -> List[Product]:
+        """
+        Get products by seller ID.
+        
+        Args:
+            seller_id: The ID of the seller to get products for.
+            
+        Returns:
+            List[Product]: The list of products for the seller.
+        """
+        pass
+
+    @abstractmethod
+    async def search_products(self, query: str) -> List[Product]:
+        """
+        Search products by query.
+        
+        Args:
+            query: The search query.
+            
+        Returns:
+            List[Product]: The list of products matching the query.
+        """
+        pass
+
+    @abstractmethod
     async def get_active_products(self) -> List[Product]:
         """
         Get all active products.
@@ -134,6 +160,19 @@ class CategoryRepository(ABC):
         pass
 
     @abstractmethod
+    async def get_by_name(self, name: str) -> Optional[Category]:
+        """
+        Get category by name.
+        
+        Args:
+            name: The name of the category to get.
+            
+        Returns:
+            Optional[Category]: The category if found, None otherwise.
+        """
+        pass
+
+    @abstractmethod
     async def get_root_categories(self) -> List[Category]:
         """
         Get root categories.
@@ -153,6 +192,19 @@ class CategoryRepository(ABC):
             
         Returns:
             List[Category]: The list of subcategories.
+        """
+        pass
+
+    @abstractmethod
+    async def get_children(self, parent_id: CategoryId) -> List[Category]:
+        """
+        Get child categories.
+        
+        Args:
+            parent_id: The ID of the parent category to get children for.
+            
+        Returns:
+            List[Category]: The list of child categories.
         """
         pass
 

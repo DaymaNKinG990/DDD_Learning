@@ -1,14 +1,13 @@
 """Domain events for authentication."""
 
 # Python imports
-from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 
 # Local imports
 from src.shared.domain.events import DomainEvent
 
 
-@dataclass
 class UserLoggedIn(DomainEvent):
     """
     Event raised when user logs in.
@@ -25,8 +24,29 @@ class UserLoggedIn(DomainEvent):
     user_agent: str
     timestamp: datetime
 
+    def __init__(self, **data: dict[str, Any]):
+        """Initialize UserLoggedIn event."""
+        super().__init__(
+            event_type="UserLoggedIn",
+            aggregate_id=data.get("user_id", ""),
+            **data
+        )
 
-@dataclass
+    def to_dict(self) -> dict[str, Any]:
+        """Convert event to dictionary representation."""
+        return {
+            "event_id": str(self.event_id),
+            "event_type": self.event_type,
+            "aggregate_id": self.aggregate_id,
+            "occurred_on": self.occurred_on.isoformat(),
+            "version": self.version,
+            "user_id": self.user_id,
+            "ip_address": self.ip_address,
+            "user_agent": self.user_agent,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
 class UserLoggedOut(DomainEvent):
     """
     Event raised when user logs out.
@@ -41,8 +61,28 @@ class UserLoggedOut(DomainEvent):
     session_id: str
     timestamp: datetime
 
+    def __init__(self, **data: dict[str, Any]):
+        """Initialize UserLoggedOut event."""
+        super().__init__(
+            event_type="UserLoggedOut",
+            aggregate_id=data.get("user_id", ""),
+            **data
+        )
 
-@dataclass
+    def to_dict(self) -> dict[str, Any]:
+        """Convert event to dictionary representation."""
+        return {
+            "event_id": str(self.event_id),
+            "event_type": self.event_type,
+            "aggregate_id": self.aggregate_id,
+            "occurred_on": self.occurred_on.isoformat(),
+            "version": self.version,
+            "user_id": self.user_id,
+            "session_id": self.session_id,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
 class TokenRevoked(DomainEvent):
     """Event raised when token is revoked.
     
@@ -58,8 +98,29 @@ class TokenRevoked(DomainEvent):
     reason: str
     timestamp: datetime
 
+    def __init__(self, **data: dict[str, Any]):
+        """Initialize TokenRevoked event."""
+        super().__init__(
+            event_type="TokenRevoked",
+            aggregate_id=data.get("user_id", ""),
+            **data
+        )
 
-@dataclass
+    def to_dict(self) -> dict[str, Any]:
+        """Convert event to dictionary representation."""
+        return {
+            "event_id": str(self.event_id),
+            "event_type": self.event_type,
+            "aggregate_id": self.aggregate_id,
+            "occurred_on": self.occurred_on.isoformat(),
+            "version": self.version,
+            "user_id": self.user_id,
+            "token_id": self.token_id,
+            "reason": self.reason,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
 class SessionExpired(DomainEvent):
     """Event raised when session expires.
     
@@ -73,8 +134,28 @@ class SessionExpired(DomainEvent):
     session_id: str
     timestamp: datetime
 
+    def __init__(self, **data: dict[str, Any]):
+        """Initialize SessionExpired event."""
+        super().__init__(
+            event_type="SessionExpired",
+            aggregate_id=data.get("user_id", ""),
+            **data
+        )
 
-@dataclass
+    def to_dict(self) -> dict[str, Any]:
+        """Convert event to dictionary representation."""
+        return {
+            "event_id": str(self.event_id),
+            "event_type": self.event_type,
+            "aggregate_id": self.aggregate_id,
+            "occurred_on": self.occurred_on.isoformat(),
+            "version": self.version,
+            "user_id": self.user_id,
+            "session_id": self.session_id,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
 class FailedLoginAttempt(DomainEvent):
     """Event raised when login attempt fails.
     
@@ -92,8 +173,30 @@ class FailedLoginAttempt(DomainEvent):
     reason: str
     timestamp: datetime
 
+    def __init__(self, **data: dict[str, Any]):
+        """Initialize FailedLoginAttempt event."""
+        super().__init__(
+            event_type="FailedLoginAttempt",
+            aggregate_id=data.get("email", ""),
+            **data
+        )
 
-@dataclass
+    def to_dict(self) -> dict[str, Any]:
+        """Convert event to dictionary representation."""
+        return {
+            "event_id": str(self.event_id),
+            "event_type": self.event_type,
+            "aggregate_id": self.aggregate_id,
+            "occurred_on": self.occurred_on.isoformat(),
+            "version": self.version,
+            "email": self.email,
+            "ip_address": self.ip_address,
+            "user_agent": self.user_agent,
+            "reason": self.reason,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
 class PasswordChanged(DomainEvent):
     """Event raised when password is changed.
     
@@ -105,8 +208,27 @@ class PasswordChanged(DomainEvent):
     user_id: str
     timestamp: datetime
 
+    def __init__(self, **data: dict[str, Any]):
+        """Initialize PasswordChanged event."""
+        super().__init__(
+            event_type="PasswordChanged",
+            aggregate_id=data.get("user_id", ""),
+            **data
+        )
 
-@dataclass
+    def to_dict(self) -> dict[str, Any]:
+        """Convert event to dictionary representation."""
+        return {
+            "event_id": str(self.event_id),
+            "event_type": self.event_type,
+            "aggregate_id": self.aggregate_id,
+            "occurred_on": self.occurred_on.isoformat(),
+            "version": self.version,
+            "user_id": self.user_id,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
 class AccountLocked(DomainEvent):
     """Event raised when account is locked.
     
@@ -120,8 +242,28 @@ class AccountLocked(DomainEvent):
     reason: str
     timestamp: datetime
 
+    def __init__(self, **data: dict[str, Any]):
+        """Initialize AccountLocked event."""
+        super().__init__(
+            event_type="AccountLocked",
+            aggregate_id=data.get("user_id", ""),
+            **data
+        )
 
-@dataclass
+    def to_dict(self) -> dict[str, Any]:
+        """Convert event to dictionary representation."""
+        return {
+            "event_id": str(self.event_id),
+            "event_type": self.event_type,
+            "aggregate_id": self.aggregate_id,
+            "occurred_on": self.occurred_on.isoformat(),
+            "version": self.version,
+            "user_id": self.user_id,
+            "reason": self.reason,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
 class AccountUnlocked(DomainEvent):
     """Event raised when account is unlocked.
     
@@ -131,4 +273,24 @@ class AccountUnlocked(DomainEvent):
     """
 
     user_id: str
-    timestamp: datetime 
+    timestamp: datetime
+
+    def __init__(self, **data: dict[str, Any]):
+        """Initialize AccountUnlocked event."""
+        super().__init__(
+            event_type="AccountUnlocked",
+            aggregate_id=data.get("user_id", ""),
+            **data
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert event to dictionary representation."""
+        return {
+            "event_id": str(self.event_id),
+            "event_type": self.event_type,
+            "aggregate_id": self.aggregate_id,
+            "occurred_on": self.occurred_on.isoformat(),
+            "version": self.version,
+            "user_id": self.user_id,
+            "timestamp": self.timestamp.isoformat(),
+        } 

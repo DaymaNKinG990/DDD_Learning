@@ -29,6 +29,7 @@ class Product(Entity[ProductId]):
         category_id: The category ID.
         brand_id: The brand ID.
         sku: The product SKU.
+        stock_quantity: The stock quantity.
         is_active: Whether the product is active.
         created_at: The creation timestamp.
         updated_at: The last update timestamp.
@@ -40,6 +41,7 @@ class Product(Entity[ProductId]):
     category_id: CategoryId
     brand_id: Optional[BrandId] = None
     sku: str = ""
+    stock_quantity: int = 0
     is_active: bool = True
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))

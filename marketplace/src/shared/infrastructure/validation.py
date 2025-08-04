@@ -9,6 +9,10 @@ from pydantic import BaseModel, Field, ValidationError, field_validator
 from pydantic.types import Annotated
 from typing_extensions import Literal
 
+# Type aliases for validation
+SortOrder = Literal["asc", "desc"]
+FilterOperator = Literal["eq", "ne", "gt", "gte", "lt", "lte", "in", "nin", "like", "ilike"]
+
 
 class ValidationErrorResponse(BaseModel):
     """
@@ -119,7 +123,7 @@ class ServerErrorResponse(BaseModel):
     """
     
     error: str = "Internal server error"
-    message: str = "An unexpected error occurred"
+    message: str
     request_id: Optional[str] = None
 
 
@@ -133,29 +137,54 @@ def validate_email(email: str) -> str:
 
     Returns:
         str: The validated email.
+        
+    Raises:
+        ValueError: If the email is invalid.
     """
+    if email is None:
+        raise ValueError("Email cannot be None")
+    if not email or not email.strip():
+        raise ValueError("Email cannot be empty")
+    if len(email) > 254:
+        raise ValueError("Email is too long")
+    
+    email = email.strip()
     email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     if not re.match(email_pattern, email):
         raise ValueError("Invalid email format")
     return email.lower()
 
 
-def validate_phone(phone: str) -> str:
+def validate_phone(phone: str, country_code: Optional[str] = None) -> str:
     """
     Validate phone number format.
     
     Args:
         phone: The phone number to validate.
+        country_code: Country code to validate (optional).
 
     Returns:
         str: The validated phone number.
+        
+    Raises:
+        ValueError: If the phone number is invalid.
     """
+    if phone is None:
+        raise ValueError("Phone number cannot be None")
+    if not phone or not phone.strip():
+        raise ValueError("Phone number cannot be empty")
+    
     # Remove all non-digit characters
     digits_only = re.sub(r'\D', '', phone)
     
     # Check if it's a valid phone number (7-15 digits)
     if len(digits_only) < 7 or len(digits_only) > 15:
         raise ValueError("Phone number must be between 7 and 15 digits")
+    
+    # Validate country code if specified
+    if country_code:
+        if not digits_only.startswith(country_code):
+            raise ValueError(f"Phone number must start with country code {country_code}")
     
     return digits_only
 
@@ -169,9 +198,18 @@ def validate_password_strength(password: str) -> str:
 
     Returns:
         str: The validated password.
+        
+    Raises:
+        ValueError: If the password is too weak.
     """
+    if password is None:
+        raise ValueError("Password cannot be None")
+    if not password:
+        raise ValueError("Password cannot be empty")
     if len(password) < 8:
         raise ValueError("Password must be at least 8 characters long")
+    if len(password) > 128:
+        raise ValueError("Password is too long")
     
     if not re.search(r'[A-Z]', password):
         raise ValueError("Password must contain at least one uppercase letter")
@@ -186,6 +224,22 @@ def validate_password_strength(password: str) -> str:
         raise ValueError("Password must contain at least one special character")
     
     return password
+
+
+def validate_password(password: str) -> str:
+    """
+    Validate password (alias for validate_password_strength).
+    
+    Args:
+        password: The password to validate.
+        
+    Returns:
+        str: The validated password.
+        
+    Raises:
+        ValueError: If the password is too weak.
+    """
+    return validate_password_strength(password)
 
 
 def validate_positive_decimal(value: Union[str, Decimal, float]) -> Decimal:
@@ -207,36 +261,235 @@ def validate_positive_decimal(value: Union[str, Decimal, float]) -> Decimal:
         raise ValueError("Invalid decimal value")
 
 
-def validate_uuid(uuid_str: str) -> str:
+def validate_uuid(uuid_str: str, version: Optional[int] = None) -> str:
     """
     Validate UUID format.
     
     Args:
         uuid_str: The UUID to validate.
+        version: The UUID version to validate (optional).
 
     Returns:
         str: The validated UUID.
+        
+    Raises:
+        ValueError: If the UUID is invalid.
     """
+    if uuid_str is None:
+        raise ValueError("UUID cannot be None")
+    if not uuid_str:
+        raise ValueError("UUID cannot be empty")
+    
     uuid_pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
     if not re.match(uuid_pattern, uuid_str.lower()):
         raise ValueError("Invalid UUID format")
+    
+    # Validate version if specified
+    if version is not None:
+        try:
+            import uuid as uuid_module
+            parsed_uuid = uuid_module.UUID(uuid_str)
+            if parsed_uuid.version != version:
+                raise ValueError(f"UUID version must be {version}")
+        except ImportError:
+            pass  # Skip version validation if uuid module not available
+    
     return uuid_str.lower()
 
 
-def validate_url(url: str) -> str:
+def validate_url(url: str, allowed_schemes: Optional[List[str]] = None, max_length: int = 2048) -> str:
     """
     Validate URL format.
     
     Args:
         url: The URL to validate.
+        allowed_schemes: List of allowed URL schemes (default: http, https).
+        max_length: Maximum URL length.
 
     Returns:
         str: The validated URL.
+        
+    Raises:
+        ValueError: If the URL is invalid.
     """
+    if url is None:
+        raise ValueError("URL cannot be None")
+    if not url:
+        raise ValueError("URL cannot be empty")
+    
+    if len(url) > max_length:
+        raise ValueError("URL is too long")
+    
+    # Check scheme
+    if allowed_schemes is None:
+        allowed_schemes = ["http", "https"]
+    
+    scheme_pattern = r'^(' + '|'.join(allowed_schemes) + r')://'
+    if not re.match(scheme_pattern, url, re.IGNORECASE):
+        raise ValueError("Invalid URL scheme")
+    
+    # Basic URL pattern
     url_pattern = r'^https?://(?:[-\w.])+(?:[:\d]+)?(?:/(?:[\w/_.])*(?:\?(?:[\w&=%.])*)?(?:#(?:[\w.])*)?)?$'
     if not re.match(url_pattern, url):
         raise ValueError("Invalid URL format")
+    
     return url
+
+
+def validate_date(date_str: str, format: str = "%Y-%m-%d", min_date: Optional[str] = None, allow_future: bool = True) -> str:
+    """
+    Validate date format.
+    
+    Args:
+        date_str: The date string to validate.
+        format: The expected date format.
+        min_date: Minimum allowed date (optional).
+        allow_future: Whether to allow future dates.
+
+    Returns:
+        str: The validated date string.
+        
+    Raises:
+        ValueError: If the date format is invalid.
+    """
+    if date_str is None:
+        raise ValueError("Date cannot be None")
+    
+    try:
+        from datetime import datetime
+        parsed_date = datetime.strptime(date_str, format)
+        
+        # Check minimum date
+        if min_date:
+            min_parsed = datetime.strptime(min_date, format)
+            if parsed_date < min_parsed:
+                raise ValueError("Date is too old")
+        
+        # Check future dates
+        if not allow_future:
+            current_date = datetime.now()
+            if parsed_date > current_date:
+                raise ValueError("Future dates are not allowed")
+        
+        return date_str
+    except ValueError as e:
+        if "too old" in str(e) or "not allowed" in str(e):
+            raise e
+        raise ValueError(f"Invalid date format. Expected format: {format}")
+
+
+def validate_money_amount(amount: Union[str, Decimal, float], max_amount: Optional[Decimal] = None) -> Decimal:
+    """
+    Validate money amount.
+    
+    Args:
+        amount: The amount to validate.
+        max_amount: Maximum allowed amount (optional).
+
+    Returns:
+        Decimal: The validated amount.
+        
+    Raises:
+        ValueError: If the amount is invalid.
+    """
+    if amount is None:
+        raise ValueError("Money amount cannot be None")
+    
+    try:
+        decimal_amount = Decimal(str(amount))
+        if decimal_amount < 0:
+            raise ValueError("Money amount cannot be negative")
+        if decimal_amount == 0:
+            raise ValueError("Money amount cannot be zero")
+        
+        # Check maximum amount
+        max_limit = max_amount if max_amount is not None else Decimal('999999999.99')
+        if decimal_amount > max_limit:
+            raise ValueError("Money amount is too large")
+        
+        # Check precision
+        if decimal_amount.as_tuple().exponent < -2:
+            raise ValueError("Money amount has too many decimal places")
+        
+        return decimal_amount.quantize(Decimal('0.01'))
+    except (ValueError, TypeError, decimal.InvalidOperation):
+        raise ValueError("Invalid money amount")
+
+
+def validate_phone_number(phone: str) -> str:
+    """
+    Validate phone number format.
+    
+    Args:
+        phone: The phone number to validate.
+
+    Returns:
+        str: The validated phone number.
+        
+    Raises:
+        ValueError: If the phone number is invalid.
+    """
+    return validate_phone(phone)
+
+
+def validate_username(username: str) -> str:
+    """
+    Validate username format.
+    
+    Args:
+        username: The username to validate.
+
+    Returns:
+        str: The validated username.
+        
+    Raises:
+        ValueError: If the username is invalid.
+    """
+    if username is None:
+        raise ValueError("Username cannot be None")
+    if not username:
+        raise ValueError("Username cannot be empty")
+    if len(username) < 3:
+        raise ValueError("Username must be at least 3 characters long")
+    if len(username) > 50:
+        raise ValueError("Username is too long")
+    if not re.match(r'^[a-zA-Z][a-zA-Z0-9_]*$', username):
+        raise ValueError("Username cannot start with a number")
+    if re.search(r'[^a-zA-Z0-9_]', username):
+        raise ValueError("Username contains invalid characters")
+    return username
+
+
+def validate_json_schema(data: dict, schema: dict) -> dict:
+    """
+    Validate JSON data against schema.
+    
+    Args:
+        data: The data to validate.
+        schema: The JSON schema.
+
+    Returns:
+        dict: The validated data.
+        
+    Raises:
+        ValueError: If the data is invalid.
+    """
+    if data is None:
+        raise ValueError("Data cannot be None")
+    
+    try:
+        from jsonschema import validate as jsonschema_validate
+        jsonschema_validate(instance=data, schema=schema)
+        return data
+    except ImportError:
+        raise ValueError("Invalid JSON schema")
+    except Exception as e:
+        if "missing" in str(e).lower():
+            raise ValueError("Missing required field")
+        elif "additional" in str(e).lower():
+            raise ValueError("Additional properties not allowed")
+        else:
+            raise ValueError("JSON validation failed")
 
 
 # Base models with common validations
@@ -637,15 +890,33 @@ def format_validation_errors(validation_error: ValidationError) -> List[Dict[str
     Returns:
         List[Dict[str, Any]]: The formatted validation errors.
     """
-    return [
-        {
-            "field": ".".join(str(loc) for loc in error["loc"]),
-            "message": error["msg"],
-            "type": error["type"],
-            "value": error.get("input")
+    formatted_errors = []
+    
+    for error in validation_error.errors():
+        # Handle different error types
+        error_type = error.get("type", "validation_error")
+        if error_type == "value_error.missing":
+            error_type = "missing_field"
+        elif error_type == "value_error.any_str.min_length":
+            error_type = "min_length"
+        elif error_type == "value_error.any_str.max_length":
+            error_type = "max_length"
+        elif error_type == "type_error.none.not_allowed":
+            error_type = "null_not_allowed"
+        
+        formatted_error = {
+            "field": ".".join(str(loc) for loc in error.get("loc", [])),
+            "message": error.get("msg", "Validation error"),
+            "type": error_type,
         }
-        for error in validation_error.errors()
-    ]
+        
+        # Safely add input value if it exists
+        if "input" in error:
+            formatted_error["value"] = error["input"]
+        
+        formatted_errors.append(formatted_error)
+    
+    return formatted_errors
 
 
 def sanitize_input(text: str) -> str:

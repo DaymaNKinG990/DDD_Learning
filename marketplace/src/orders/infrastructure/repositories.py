@@ -70,6 +70,66 @@ class InMemoryOrderRepository(InMemoryRepository[Order], OrderRepository):
             if order.customer_id == customer_id
         ]
 
+    async def get_by_customer_id(self, customer_id: str) -> List[Order]:
+        """
+        Get orders by customer ID.
+        
+        Args:
+            customer_id (str): The ID of the customer.
+
+        Returns:
+            List[Order]: The orders for the customer.
+        """
+        return [
+            order for order in self._orders.values()
+            if order.customer_id == customer_id
+        ]
+
+    async def get_pending_orders(self) -> List[Order]:
+        """
+        Get all pending orders.
+        
+        Returns:
+            List[Order]: The pending orders.
+        """
+        from src.orders.domain.value_objects import OrderStatus
+        return [
+            order for order in self._orders.values()
+            if order.status == OrderStatus.PENDING
+        ]
+
+    async def get_orders_by_status(self, status: str) -> List[Order]:
+        """
+        Get all orders by status.
+        
+        Args:
+            status (str): The status of the orders to get.
+
+        Returns:
+            List[Order]: The orders with the given status.
+        """
+        from src.orders.domain.value_objects import OrderStatus
+        return [
+            order for order in self._orders.values()
+            if order.status == OrderStatus(status)
+        ]
+
+    async def get_orders_by_date_range(self, start_date, end_date) -> List[Order]:
+        """
+        Get all orders within a date range.
+        
+        Args:
+            start_date: The start date for the range.
+            end_date: The end date for the range.
+
+        Returns:
+            List[Order]: The orders within the date range.
+        """
+        return [
+            order for order in self._orders.values()
+            if start_date <= order.created_at <= end_date
+        ]
+
     async def delete(self, order_id: OrderId) -> bool:
         """
         Delete order by ID.

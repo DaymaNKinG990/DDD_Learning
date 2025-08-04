@@ -77,6 +77,101 @@ class PaymentStatus(str, Enum):
     REFUNDED = "refunded"
 
 
+class PaymentType(str, Enum):
+    """
+    Payment type enumeration.
+    
+    This enumeration represents the type of a payment.
+    
+    Attributes:
+        CREDIT_CARD (str): Credit card payment.
+        DEBIT_CARD (str): Debit card payment.
+        BANK_TRANSFER (str): Bank transfer payment.
+        DIGITAL_WALLET (str): Digital wallet payment.
+        CASH (str): Cash payment.
+    """
+
+    CREDIT_CARD = "credit_card"
+    DEBIT_CARD = "debit_card"
+    BANK_TRANSFER = "bank_transfer"
+    DIGITAL_WALLET = "digital_wallet"
+    CASH = "cash"
+
+
+class PaymentCurrency(str, Enum):
+    """
+    Payment currency enumeration.
+    
+    This enumeration represents the currency of a payment.
+    
+    Attributes:
+        USD (str): US Dollar.
+        EUR (str): Euro.
+        RUB (str): Russian Ruble.
+    """
+
+    USD = "USD"
+    EUR = "EUR"
+    RUB = "RUB"
+
+
+@dataclass(frozen=True)
+class PaymentAmount(ValueObject):
+    """
+    Payment amount value object.
+    
+    This value object represents the amount of a payment.
+    
+    Attributes:
+        amount (Decimal): The amount value.
+        currency (PaymentCurrency): The currency of the amount.
+    """
+
+    amount: Decimal
+    currency: PaymentCurrency
+
+    def __post_init__(self) -> None:
+        """Validate amount after initialization."""
+        if self.amount < 0:
+            raise ValueError("Amount cannot be negative")
+
+    def __hash__(self) -> int:
+        """Hash the payment amount."""
+        return hash((self.amount, self.currency))
+
+    def __str__(self) -> str:
+        """String representation of the payment amount."""
+        return f"{self.amount} {self.currency.value}"
+
+    def __add__(self, other: "PaymentAmount") -> "PaymentAmount":
+        """
+        Add two payment amounts.
+        
+        Args:
+            other (PaymentAmount): The amount to add.
+
+        Returns:
+            PaymentAmount: The sum of the two amounts.
+        """
+        if self.currency != other.currency:
+            raise ValueError("Cannot add amounts with different currencies")
+        return PaymentAmount(amount=self.amount + other.amount, currency=self.currency)
+
+    def __sub__(self, other: "PaymentAmount") -> "PaymentAmount":
+        """
+        Subtract two payment amounts.
+        
+        Args:
+            other (PaymentAmount): The amount to subtract.
+
+        Returns:
+            PaymentAmount: The difference of the two amounts.
+        """
+        if self.currency != other.currency:
+            raise ValueError("Cannot subtract amounts with different currencies")
+        return PaymentAmount(amount=self.amount - other.amount, currency=self.currency)
+
+
 @dataclass(frozen=True)
 class Amount(ValueObject):
     """

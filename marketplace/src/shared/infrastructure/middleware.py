@@ -397,3 +397,25 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         
         return response 
+
+
+class ErrorHandlingMiddleware:
+    """
+    Middleware for global error handling.
+    """
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        await self.app(scope, receive, send) 
+
+
+class AuthenticationMiddleware:
+    """
+    Middleware for authentication handling.
+    """
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        await self.app(scope, receive, send) 

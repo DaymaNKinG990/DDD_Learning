@@ -6,7 +6,7 @@ from typing import List, Optional
 
 # Local imports
 from src.users.domain.entities import Customer, Seller, User
-from src.users.domain.value_objects import CustomerId, Email, SellerId, UserId
+from src.users.domain.value_objects import CustomerId, Email, SellerId, UserId, Username
 
 
 class UserRepository(ABC):
@@ -53,6 +53,29 @@ class UserRepository(ABC):
 
         Returns:
             Optional[User]: The user.
+        """
+        pass
+
+    @abstractmethod
+    async def get_by_username(self, username: Username) -> Optional[User]:
+        """
+        Get user by username.
+        
+        Args:
+            username: The username of the user.
+
+        Returns:
+            Optional[User]: The user.
+        """
+        pass
+
+    @abstractmethod
+    async def get_active_users(self) -> List[User]:
+        """
+        Get all active users.
+        
+        Returns:
+            List[User]: The active users.
         """
         pass
 

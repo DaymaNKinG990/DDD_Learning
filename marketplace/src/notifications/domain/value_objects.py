@@ -276,6 +276,7 @@ class NotificationRecipient(ValueObject):
         new_preferences = self.preferences.copy()
         new_preferences[preference_key] = enabled
         return NotificationRecipient(
+            user_id=self.user_id,
             email=self.email,
             phone=self.phone,
             push_token=self.push_token,

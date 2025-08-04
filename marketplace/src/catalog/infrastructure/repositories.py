@@ -51,6 +51,30 @@ class InMemoryProductRepository(InMemoryRepository[Product], ProductRepository):
         """
         return self._products.get(str(product_id))
 
+    async def get_by_sku(self, sku: str) -> Optional[Product]:
+        """
+        Get product by SKU.
+        
+        Args:
+            sku: The SKU of the product to get.
+            
+        Returns:
+            Optional[Product]: The product if found, None otherwise.
+        """
+        for product in self._products.values():
+            if product.sku == sku:
+                return product
+        return None
+
+    async def get_active_products(self) -> List[Product]:
+        """
+        Get all active products.
+        
+        Returns:
+            List[Product]: The list of active products.
+        """
+        return [product for product in self._products.values() if product.is_active]
+
     async def get_all(self) -> List[Product]:
         """
         Get all products.
@@ -88,6 +112,37 @@ class InMemoryProductRepository(InMemoryRepository[Product], ProductRepository):
         return [
             product for product in self._products.values()
             if product.brand_id == brand_id
+        ]
+
+    async def get_by_seller_id(self, seller_id: str) -> List[Product]:
+        """
+        Get products by seller ID.
+        
+        Args:
+            seller_id: The ID of the seller to get products for.
+            
+        Returns:
+            List[Product]: The list of products for the seller.
+        """
+        # For now, return all products since we don't have seller_id in Product entity
+        # In a real implementation, Product would have a seller_id field
+        return list(self._products.values())
+
+    async def search_products(self, query: str) -> List[Product]:
+        """
+        Search products by query.
+        
+        Args:
+            query: The search query.
+            
+        Returns:
+            List[Product]: The list of products matching the query.
+        """
+        query_lower = query.lower()
+        return [
+            product for product in self._products.values()
+            if query_lower in product.name.value.lower() or 
+               query_lower in product.description.value.lower()
         ]
 
     async def delete(self, product_id: ProductId) -> bool:
@@ -142,6 +197,63 @@ class InMemoryCategoryRepository(InMemoryRepository[Category], CategoryRepositor
             Optional[Category]: The category if found, None otherwise.
         """
         return self._categories.get(str(category_id))
+
+    async def get_by_name(self, name: str) -> Optional[Category]:
+        """
+        Get category by name.
+        
+        Args:
+            name: The name of the category to get.
+            
+        Returns:
+            Optional[Category]: The category if found, None otherwise.
+        """
+        for category in self._categories.values():
+            if category.name == name:
+                return category
+        return None
+
+    async def get_root_categories(self) -> List[Category]:
+        """
+        Get root categories.
+        
+        Returns:
+            List[Category]: The list of root categories.
+        """
+        return [category for category in self._categories.values() if category.parent_id is None]
+
+    async def get_subcategories(self, parent_id: CategoryId) -> List[Category]:
+        """
+        Get subcategories.
+        
+        Args:
+            parent_id: The ID of the parent category to get subcategories for.
+            
+        Returns:
+            List[Category]: The list of subcategories.
+        """
+        return [category for category in self._categories.values() if category.parent_id == parent_id]
+
+    async def get_children(self, parent_id: CategoryId) -> List[Category]:
+        """
+        Get child categories.
+        
+        Args:
+            parent_id: The ID of the parent category to get children for.
+            
+        Returns:
+            List[Category]: The list of child categories.
+        """
+        return [category for category in self._categories.values() if category.parent_id == parent_id]
+
+    async def get_active_categories(self) -> List[Category]:
+        """
+        Get all active categories.
+        
+        Returns:
+            List[Category]: The list of active categories.
+        """
+        return [category for category in self._categories.values() if category.is_active]
 
     async def get_all(self) -> List[Category]:
         """
@@ -219,6 +331,30 @@ class InMemoryBrandRepository(InMemoryRepository[Brand], BrandRepository):
             Optional[Brand]: The brand if found, None otherwise.
         """
         return self._brands.get(str(brand_id))
+
+    async def get_by_name(self, name: str) -> Optional[Brand]:
+        """
+        Get brand by name.
+        
+        Args:
+            name: The name of the brand to get.
+            
+        Returns:
+            Optional[Brand]: The brand if found, None otherwise.
+        """
+        for brand in self._brands.values():
+            if brand.name == name:
+                return brand
+        return None
+
+    async def get_active_brands(self) -> List[Brand]:
+        """
+        Get all active brands.
+        
+        Returns:
+            List[Brand]: The list of active brands.
+        """
+        return [brand for brand in self._brands.values() if brand.is_active]
 
     async def get_all(self) -> List[Brand]:
         """

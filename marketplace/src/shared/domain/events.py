@@ -4,8 +4,8 @@
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
 from typing import Any
-from uuid import UUID
-from pydantic import BaseModel, Field
+import uuid
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class DomainEvent(BaseModel, ABC):
@@ -20,21 +20,13 @@ class DomainEvent(BaseModel, ABC):
         version: The version of the event.
     """
 
-    event_id: UUID = Field(default_factory=lambda: UUID.uuid4())
+    event_id: uuid.UUID = Field(default_factory=uuid.uuid4)
     event_type: str = Field(description="Type of the event")
     aggregate_id: str = Field(description="ID of the aggregate that raised the event")
     occurred_on: datetime = Field(default_factory=lambda: datetime.now(UTC))
     version: int = Field(default=1, description="Event version for event sourcing")
 
-    class Config:
-        """
-        Configuration for the domain event.
-        
-        Attributes:
-            arbitrary_types_allowed: Whether to allow arbitrary types.
-        """
-
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def __init__(self, **data: dict[str, Any]):
         """

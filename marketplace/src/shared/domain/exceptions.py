@@ -21,6 +21,16 @@ class BusinessRuleViolationError(DomainException):
     pass
 
 
+class AuthenticationError(DomainException):
+    """Raised when authentication fails."""
+    pass
+
+
 class ConcurrencyError(DomainException):
     """Raised when there's a concurrency conflict."""
+    pass
+
+
+class ValidationError(DomainException):
+    """Raised when validation fails."""
     pass
